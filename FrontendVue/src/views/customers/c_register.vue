@@ -1,0 +1,93 @@
+<template>
+    <h1 class="m-3">Register as Customer</h1>
+    <hr class="border">
+    <div class="d-flex align-items-center justify-content-center my-2">
+        <div class="col-10 col-lg-6">
+            <form @submit.prevent="handleRegisterCustomer">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label" for="username">Username</label>
+                        <input class="form-control" id="username" maxlength="32" minlength="4" v-model="username"
+                            placeholder="Username" required type="text" value=""><br>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="password">Password</label>
+                        <input class="form-control" id="password" maxlength="32" minlength="8" v-model="password"
+                            placeholder="Password" required type="password" value=""><br>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="fullname">Full Name</label>
+                        <input class="form-control" id="fullname" maxlength="64" minlength="3" v-model="fullname"
+                            placeholder="Full Name" required type="text" value=""><br>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="contact_number">Contact Number</label>
+                        <input class="form-control" id="contact_number" max="9999999999" min="1000000000"
+                            v-model="contact_number" required type="number" value=""><br>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="address">Address</label>
+                        <input class="form-control" id="address" maxlength="256" minlength="3" v-model="address"
+                            required type="text" value=""><br>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label" for="pincode">Pincode</label>
+                        <input class="form-control" id="pincode" max="999999" min="100000" v-model="pincode" required
+                            type="number" value=""><br>
+                    </div>
+                    <div class="text-center mt-2">
+                        <input class="btn btn-success mx-2 px-3" id="submit" type="submit" value="Register as Customer">
+                    </div>
+                </div>
+            </form>
+            <br>
+            <router-link to="/register/professional">Register As Professional</router-link><br>
+            <router-link to="/login">Already have an account? Login here</router-link>
+        </div>
+    </div>
+</template>
+
+<script setup>
+import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import { useAlert } from '@/components/alert.js'
+
+const router = useRouter();
+const { showAlert } = useAlert();
+
+const username = ref('');
+const password = ref('');
+const fullname = ref('');
+const contact_number = ref('');
+const address = ref('');
+const pincode = ref('');
+
+const handleRegisterCustomer = async () => {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/register/customer', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                username: username.value,
+                password: password.value,
+                fullname: fullname.value,
+                contact_number: contact_number.value,
+                address: address.value,
+                pincode: pincode.value
+            })
+        });
+        const data = await response.json();
+
+        if (response.ok) {
+            showAlert(data.message, "success");
+            router.push({ path: '/login' });
+        } else {
+            showAlert(data.message, "danger");
+        }
+    } catch (error) {
+        console.error('Error during login:', error);
+    }
+};
+</script>

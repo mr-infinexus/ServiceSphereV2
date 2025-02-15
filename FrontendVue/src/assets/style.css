@@ -1,0 +1,158 @@
+@import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@100..900&display=swap');
+
+:root {
+    --color-body: rgb(232, 237, 242);
+    --color-base: rgba(42, 75, 140, 0.88);
+    --color-base2: rgba(20, 20, 105, 0.88);
+    --color-brand: rgba(128, 210, 242, 0.88);
+    --color-brand2: rgba(114, 78, 190, 0.88);
+    --font-base: "Commissioner";
+}
+
+html,
+body {
+    background:
+        linear-gradient(45deg, var(--color-brand) 0%, var(--color-base) 50%, var(--color-brand2) 100%),
+        url('/ServiceSphere.png') no-repeat right center / cover;
+    background-attachment: fixed;
+    font-family: var(--font-base), sans-serif;
+    line-height: 1.4;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 1199px) {
+    body {
+        font-size: 1rem;
+    }
+
+    .btn {
+        font-size: 1rem;
+        padding-left: 0.9rem;
+        padding-right: 0.9rem;
+    }
+}
+
+@media (max-width: 992px) {
+    body {
+        font-size: 0.95rem;
+    }
+
+    .btn {
+        font-size: 0.95rem;
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        font-size: 0.9rem;
+    }
+
+    .btn {
+        font-size: 0.9rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+}
+
+@media (max-width: 720px) {
+    body {
+        font-size: 0.85rem;
+    }
+
+    .btn {
+        font-size: 0.85rem;
+        padding-left: 0.4rem;
+        padding-right: 0.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    body {
+        font-size: 0.8rem;
+    }
+
+    .btn {
+        font-size: 0.8rem;
+        padding-left: 0.3rem;
+        padding-right: 0.3rem;
+    }
+}
+
+.container {
+    margin-top: 10px;
+    text-align: center;
+}
+
+.fs9 {
+    font-size: 90%;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    color: var(--color-body);
+    font-weight: 800;
+}
+
+a {
+    color: var(--color-brand);
+    text-decoration: none;
+    transition: all 0.4s ease;
+}
+
+a:hover {
+    color: var(--color-base2);
+    text-decoration: underline;
+    text-shadow: 0px 0px 10px var(--color-body);
+}
+
+.img-logo {
+    width: 200px;
+    height: 200px;
+    filter: drop-shadow(1px 4px 4px rgba(0, 0, 0, 0.8));
+
+}
+
+.nav-logo {
+    width: 32px;
+    height: 32px;
+    margin-left: 4px;
+    margin-right: 4px;
+    filter: drop-shadow(1px 1px 1px rgba(0, 0, 0, 0.6));
+}
+
+label {
+    font-size: 110%;
+    font-weight: 600;
+    color: var(--color-body);
+}
+
+.btn {
+    padding: 8px 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn:hover {
+    transform: scale(1.05);
+}
+
+.alert {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    width: auto;
+    z-index: 1050;
+    border-radius: 5px;
+}
+
+.alert-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
