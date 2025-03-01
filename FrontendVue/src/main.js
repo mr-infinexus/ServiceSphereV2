@@ -1,3 +1,6 @@
+import 'bootstrap/dist/css/bootstrap.min.css'
+import 'bootstrap-icons/font/bootstrap-icons.css'
+import 'bootstrap'
 import './assets/style.css'
 import { createApp } from 'vue'
 import { createRouter, createWebHistory } from 'vue-router'
@@ -20,9 +23,9 @@ const router = createRouter({
         { path: '/register/customer', component: CustomerRegister },
         { path: '/register/professional', component: ProfessionalRegister },
         { path: '/profile', component: Profile },
-        { path: '/admin/', component: AdminHome, props: true },
-        { path: '/customer/', component: CustomerHome, props: true },
-        { path: '/professional/', component: ProfessionalHome, props: true },
+        { path: '/admin/', component: AdminHome },
+        { path: '/customer/', component: CustomerHome },
+        { path: '/professional/', component: ProfessionalHome },
         { path: "/:pathMatch(.*)*", component: ErrorPage }
     ]
 });

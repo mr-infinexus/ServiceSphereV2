@@ -144,15 +144,13 @@ label {
 
 .alert {
     position: fixed;
-    top: 20px;
+    top: 25px;
     right: 20px;
     width: auto;
     z-index: 1050;
-    border-radius: 5px;
 }
 
-.alert-message {
-    background-color: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+td {
+    padding: 0.25rem 0.25rem !important;
+    white-space: nowrap;
 }
