@@ -1,10 +1,11 @@
+from datetime import datetime, timezone, timedelta
 from flask import Flask, request, abort
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, get_jwt, jwt_required, JWTManager
 from flask_restful import Api, Resource, reqparse
 from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -119,12 +120,29 @@ class ProfileDetails(Resource):
             "username": user.username,
             "fullname": user.fullname,
             "role": user.role,
+            "service_name": user.provider.name if user.role == "professional" else None,
+            "experience": user.experience if user.role == "professional" else None,
             "address": user.address,
             "pincode": user.pincode,
             "contact_number": user.contact_number,
             "created_at": user.created_at.isoformat()
         }
         return {"details": details}, 200
+
+
+class EditProfile(Resource):
+    @jwt_required()
+    def put(self, username):
+        data = request.json
+        user = db.session.scalars(select(User).filter_by(username=username)).first()
+        if user.role == "professional":
+            user.experience = data["experience"]
+        user.fullname = data["fullname"]
+        user.address = data["address"]
+        user.pincode = data["pincode"]
+        user.contact_number = data["contact_number"]
+        db.session.commit()
+        return {"message": "Profile edited successfully!"}, 200
 
 
 class AdminHome(Resource):
@@ -198,7 +216,7 @@ class ModifyService(Resource):
     @role_required("admin")
     def put(self, service_id):
         data = self.service_parser.parse_args()
-        service = db.session.get(Service, service_id)
+        service = db.session.scalars(select(Service).filter_by(id=service_id)).first()
         if service is None:
             abort(404)
         service.name = data["name"]
@@ -210,7 +228,7 @@ class ModifyService(Resource):
 
     @role_required("admin")
     def delete(self, service_id):
-        service = db.session.get(Service, service_id)
+        service = db.session.scalars(select(Service).filter_by(id=service_id)).first()
         if service is None:
             abort(404)
         db.session.delete(service)
@@ -221,7 +239,7 @@ class ModifyService(Resource):
 class ModifyUser(Resource):
     @role_required("admin")
     def put(self, user_id):
-        user = db.session.get(User, user_id)
+        user = db.session.scalars(select(User).filter_by(id=user_id)).first()
         if user is None:
             abort(404)
         if user.status == "verified":
@@ -232,7 +250,7 @@ class ModifyUser(Resource):
 
     @role_required("admin")
     def patch(self, user_id):
-        user = db.session.get(User, user_id)
+        user = db.session.scalars(select(User).filter_by(id=user_id)).first()
         if user is None:
             abort(404)
         if user.status == "blocked":
@@ -243,7 +261,7 @@ class ModifyUser(Resource):
 
     @role_required("admin")
     def delete(self, user_id):
-        user = db.session.get(User, user_id)
+        user = db.session.scalars(select(User).filter_by(id=user_id)).first()
         if user is None:
             abort(404)
         db.session.delete(user)
@@ -284,15 +302,192 @@ class CustomerHome(Resource):
         return {"current_user": current_user, "services": services_json, "service_history": service_history_json}, 200
 
 
+class SelectProfessional(Resource):
+    @role_required("customer")
+    def get(self, service_id):
+        professionals = db.session.scalars(select(User)
+                                           .filter_by(role="professional", status="verified", service_type=service_id)
+                                           .order_by(User.fullname.asc())).all()
+        avg_ratings = dict(db.session.execute(select(Review.professional_id, func.avg(Review.rating))
+                                              .group_by(Review.professional_id)
+                                              ).all())
+        professionals_json = []
+        for professional in professionals:
+            professionals_json.append({
+                "id": professional.id,
+                "username": professional.username,
+                "fullname": professional.fullname,
+                "service_name": professional.provider.name,
+                "rating": avg_ratings[professional.id] if professional.id in avg_ratings.keys() else 0,
+                "experience": professional.experience,
+                "address": professional.address,
+                "pincode": professional.pincode,
+                "contact_number": professional.contact_number
+            })
+        return professionals_json, 200
+
+
+class ManageServiceRequest(Resource):
+    request_parser = reqparse.RequestParser()
+    request_parser.add_argument("time_of_request", required=True, type=str, help="Time of request for the service cannot be blank!")
+    request_parser.add_argument("task", required=True, type=str, help="Task of the request cannot be blank!")
+
+    @role_required("customer")
+    def post(self, service_id, professional_id):
+        data = self.request_parser.parse_args()
+        time_of_request = datetime.fromisoformat(data["time_of_request"]).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+        new_entry = ServiceRequest(service_id=service_id, professional_id=professional_id, customer_id=int(get_jwt()["sub"]),
+                                   service_status="requested", time_of_request=time_of_request, task=data["task"])
+        db.session.add(new_entry)
+        db.session.commit()
+        return {"message": "Service booked successfully!"}, 201
+
+    @role_required("customer")
+    def put(self, request_id):
+        data = self.request_parser.parse_args()
+        history_entry = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
+        if history_entry is None:
+            abort(404)
+        if history_entry.service_status != "requested":
+            abort(403)
+        time_of_request = datetime.fromisoformat(data["time_of_request"]).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
+        history_entry.time_of_request = time_of_request
+        history_entry.task = data["task"]
+        db.session.commit()
+        return {"message": "Service edited successfully!"}, 200
+
+    @role_required("customer")
+    def patch(self, request_id):
+        history_entry = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
+        if history_entry is None:
+            abort(404)
+        if history_entry.service_status == "requested":
+            history_entry.time_of_completion = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        history_entry.service_status = "closed"
+        db.session.commit()
+        return {"message": "Service closed successfully!"}, 200
+
+
+class ServiceRemarks(Resource):
+    remark_parser = reqparse.RequestParser()
+    remark_parser.add_argument("rating", required=True, type=str, help="Rating cannot be blank!")
+    remark_parser.add_argument("remarks", type=str)
+
+    @role_required("customer")
+    def put(self, request_id):
+        data = self.remark_parser.parse_args()
+        history_entry = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
+        if history_entry is None:
+            abort(404)
+        new_remark = Review(service_request_id=request_id, professional_id=history_entry.professional_id,
+                            customer_id=history_entry.customer_id, rating=data["rating"], remarks=data["remarks"])
+        history_entry.time_of_completion = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        db.session.add(new_remark)
+        db.session.commit()
+        return {"message": "Remarks submitted successfully!"}, 201
+
+
+class ProfessionalHome(Resource):
+    @role_required("professional")
+    def get(self):
+        jwt_claims = get_jwt()
+        current_user = {"id": jwt_claims["sub"], "username": jwt_claims["username"], "role": jwt_claims["role"]}
+        today_services = db.session.scalars(select(ServiceRequest)
+                                            .filter(ServiceRequest.professional_id == jwt_claims["sub"], ServiceRequest.service_status == "requested")
+                                            .order_by(ServiceRequest.time_of_request.desc())).all()
+        today_services_json = []
+        for service_request in today_services:
+            today_services_json.append({
+                "id": service_request.id,
+                "customer": service_request.customer.fullname,
+                "address": service_request.customer.address,
+                "pincode": service_request.customer.pincode,
+                "contact_number": service_request.customer.contact_number,
+                "time_of_request": service_request.time_of_request.isoformat(),
+                "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
+                "task": service_request.task,
+                "service_status": service_request.service_status
+            })
+        ongoing_services = db.session.scalars(select(ServiceRequest)
+                                              .filter(ServiceRequest.professional_id == jwt_claims["sub"], ServiceRequest.service_status == "accepted")
+                                              .order_by(ServiceRequest.time_of_request.desc())).all()
+        ongoing_services_json = []
+        for service_request in ongoing_services:
+            ongoing_services_json.append({
+                "id": service_request.id,
+                "customer": service_request.customer.fullname,
+                "address": service_request.customer.address,
+                "pincode": service_request.customer.pincode,
+                "contact_number": service_request.customer.contact_number,
+                "time_of_request": service_request.time_of_request.isoformat(),
+                "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
+                "task": service_request.task,
+                "service_status": service_request.service_status
+            })
+        closed_services = db.session.scalars(select(ServiceRequest)
+                                             .filter(ServiceRequest.professional_id == jwt_claims["sub"],
+                                                     or_(ServiceRequest.service_status == "rejected", ServiceRequest.service_status == "closed"))
+                                             .order_by(ServiceRequest.time_of_request.desc())).all()
+        closed_services_json = []
+        for service_request in closed_services:
+            closed_services_json.append({
+                "id": service_request.id,
+                "customer": service_request.customer.fullname,
+                "address": service_request.customer.address,
+                "pincode": service_request.customer.pincode,
+                "contact_number": service_request.customer.contact_number,
+                "time_of_request": service_request.time_of_request.isoformat(),
+                "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
+                "task": service_request.task,
+                "service_status": service_request.service_status
+            })
+        services_json = {
+            "today_services": today_services_json,
+            "ongoing_services": ongoing_services_json,
+            "closed_services": closed_services_json
+        }
+        return {"current_user": current_user, "services": services_json}, 200
+
+
+class ServiceAction(Resource):
+    @role_required("professional")
+    def get(self, request_id):
+        service_request = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
+        if service_request is None:
+            abort(404)
+        if service_request.service_status != "requested":
+            return {"message": "This request is not in a pending state."}, 403
+        service_request.service_status = "accepted"
+        db.session.commit()
+        return {"message": "Request accepted successfully."}, 200
+
+    @role_required("professional")
+    def patch(self, request_id):
+        service_request = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
+        if service_request is None:
+            abort(404)
+        if service_request.service_status != "requested":
+            return {"message": "This request is not in a pending state."}, 403
+        service_request.service_status = "rejected"
+        db.session.commit()
+        return {"message": "Request rejected successfully."}, 200
+
+
 api.add_resource(RegisterCustomer, "/api/register/customer")
 api.add_resource(RegisterProfessional, "/api/register/professional")
 api.add_resource(Login, "/api/login")
 api.add_resource(ServicesList, "/api/services")
 api.add_resource(ProfileDetails, "/api/profile")
+api.add_resource(EditProfile, "/api/profile/edit/<string:username>")
 api.add_resource(AdminHome, "/api/admin")
 api.add_resource(ModifyService, "/api/service/add", "/api/service/<int:service_id>/edit", "/api/service/<int:service_id>/delete")
 api.add_resource(ModifyUser, "/api/user/<int:user_id>/approve", "/api/user/<int:user_id>/block", "/api/user/<int:user_id>/delete")
 api.add_resource(CustomerHome, "/api/customer")
+api.add_resource(SelectProfessional, "/api/<int:service_id>/select_professional")
+api.add_resource(ManageServiceRequest, "/api/book/<int:service_id>/<int:professional_id>", "/api/edit/<int:request_id>", "/api/close/<int:request_id>")
+api.add_resource(ServiceRemarks, "/api/review/<int:request_id>")
+api.add_resource(ProfessionalHome, "/api/professional")
+api.add_resource(ServiceAction, "/api/service_request/<int:request_id>/accept", "/api/service_request/<int:request_id>/reject")
 
 
 if __name__ == "__main__":

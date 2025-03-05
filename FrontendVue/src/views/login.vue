@@ -1,5 +1,5 @@
 <template>
-    <h1 class="m-3">Login Page</h1>
+    <h1 class="m-3">Login</h1>
     <hr class="border">
     <div class="d-flex align-items-center justify-content-center my-3">
         <div class="col-8">
@@ -16,14 +16,16 @@
                             placeholder="Password" required type="password" /><br>
                     </div>
                     <div class="text-center mt-2">
-                        <input class="btn btn-success mx-2 px-3" id="submit" type="submit" value="Login">
+                        <button class="btn btn-success mx-2 px-3">
+                            <i class="bi bi-check2-circle me-1"></i>Login
+                        </button>
                     </div>
                 </div>
             </form>
             <br>
             <h6>Don't have an account? Register now !</h6>
-            <router-link to="/register/customer">Register As Customer</router-link><br>
-            <router-link to="/register/professional">Register As Professional</router-link>
+            <router-link to="/register/customer"><b>Register as Customer</b></router-link><br>
+            <router-link to="/register/professional"><b>Register as Professional</b></router-link>
         </div>
     </div>
 </template>
@@ -51,11 +53,9 @@ const handleLogin = async () => {
             })
         });
         const data = await response.json();
-
         if (response.ok) {
             showAlert(data.message, "success");
-            const jwttoken = data.token;
-            localStorage.setItem('token', jwttoken);
+            localStorage.setItem('token', data.token);
             const goto = '/' + data.role;
             router.push({ path: goto });
         } else {

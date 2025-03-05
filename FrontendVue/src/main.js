@@ -12,6 +12,7 @@ import ProfessionalRegister from '@/views/professionals/p_register.vue'
 import Profile from '@/views/profile.vue'
 import AdminHome from '@/views/admin/a_home.vue'
 import CustomerHome from '@/views/customers/c_home.vue'
+import SelectProfessional from '@/views/customers/c_select_professional.vue'
 import ProfessionalHome from '@/views/professionals/p_home.vue'
 import ErrorPage from '@/views/errorpage.vue'
 
@@ -25,9 +26,14 @@ const router = createRouter({
         { path: '/profile', component: Profile },
         { path: '/admin/', component: AdminHome },
         { path: '/customer/', component: CustomerHome },
+        { path: '/select_professional/:id', component: SelectProfessional },
         { path: '/professional/', component: ProfessionalHome },
         { path: "/:pathMatch(.*)*", component: ErrorPage }
     ]
 });
 
-createApp(App).use(router).mount('#app')
+const app = createApp(App);
+app.use(router);
+router.isReady().then(() => {
+    app.mount('#app')
+});
