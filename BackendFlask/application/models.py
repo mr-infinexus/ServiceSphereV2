@@ -6,11 +6,12 @@ class User(db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(32), nullable=False, unique=True)
+    email = db.Column(db.String(64), nullable=False, unique=True)
     password_hashed = db.Column(db.String(256), nullable=False)
     role = db.Column(db.Enum("admin", "customer", "professional"), nullable=False)
     status = db.Column(db.Enum("pending", "verified", "blocked"), nullable=False)
     fullname = db.Column(db.String(64), nullable=False)
-    address = db.Column(db.String(256), nullable=False)
+    address = db.Column(db.String(128), nullable=False)
     pincode = db.Column(db.Integer, nullable=False)
     contact_number = db.Column(db.Integer, nullable=False)
     service_type = db.Column(db.Integer, db.ForeignKey("services.id"), nullable=True)

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400..800&display=swap');
+
+        html,
+        body {
+            background: linear-gradient(45deg, rgba(128, 210, 242, 0.88) 0%, rgba(42, 75, 140, 0.88) 50%, rgba(114, 78, 190, 0.88) 100%);
+            background-attachment: fixed;
+            font-family: "Commissioner", sans-serif;
+            line-height: 1.4;
+            font-size: 1rem;
+        }
+
+        h1,
+        h4,
+        h5 {
+            color: rgb(232, 237, 242);
+            font-weight: 800;
+        }
+    </style>
+</head>
+
+<body class="d-flex align-items-center justify-content-center">
+    <div class="container p-4 rounded shadow-lg min-vh-100">
+        <div class="container-fluid bg-primary-subtle text-primary-emphasis p-2 mb-3 rounded">
+            <h1 class="text-center text-black">ServiceSphere Monthly Activity Report</h1>
+        </div>
+        <h4>Dear {{ customer }},<br>Here is your Monthly Activity Report<br></h4>
+        <hr class="border">
+        <div class="row g-4 justify-content-center">
+            <div class="col-md-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-info text-white text-center">
+                        <h5>Service Requests Summary</h5>
+                    </div>
+                    <div class="card-body">
+                        <canvas id="serviceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const serviceCounts = {{ service_counts | tojson }};
+
+    const serviceLabels = Object.keys(serviceCounts);
+    const serviceData = Object.values(serviceCounts);
+    const serviceColors = ["#008008", "#FF5733", "#C70039", "#007BFF"];
+
+    const serviceCtx = document.getElementById('serviceChart').getContext('2d');
+    new Chart(serviceCtx, {
+        type: 'bar',
+        data: {
+            labels: serviceLabels,
+            datasets: [{
+                label: 'Service Requests',
+                data: serviceData,
+                backgroundColor: serviceColors,
+                borderColor: "#333333",
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true
+                },
+                title: {
+                    display: true,
+                    text: 'Service Requests Summary'
+                }
+            }
+        }
+    });
+    });
+</script>
+
+</html>

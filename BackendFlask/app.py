@@ -15,8 +15,12 @@ cors = CORS(app)
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
 
-import application.init_db
+from application import init_db, tasks, workers
 from application.models import User, Service, ServiceRequest, Review
+
+celery = workers.celery
+celery.Task = workers.ContextTask
+app.app_context().push()
 
 
 def role_required(role):
@@ -24,7 +28,7 @@ def role_required(role):
         @jwt_required()
         @wraps(func)
         def wrapper(*args, **kwargs):
-            current_role = get_jwt()["role"] 
+            current_role = get_jwt()["role"]
             if current_role != role:
                 return {"message": f"You are not supposed to be there {current_role}", "role": current_role}, 403
             return func(*args, **kwargs)
@@ -40,9 +44,8 @@ class RegisterCustomer(Resource):
             return {"message": "User already exists!"}, 401
         if not user:
             pwhash = generate_password_hash(data["password"])
-            new_user = User(username=data["username"], password_hashed=pwhash, role="customer", status="verified",
-                            fullname=data["fullname"], address=data["address"], pincode=int(data["pincode"]),
-                            contact_number=int(data["contact_number"]))
+            new_user = User(username=data["username"], password_hashed=pwhash, role="customer", status="verified", email=data["email"],
+                            fullname=data["fullname"], address=data["address"], pincode=int(data["pincode"]), contact_number=int(data["contact_number"]))
             db.session.add(new_user)
             db.session.commit()
             return {"message": "Registration successful! Please log in."}, 200
@@ -57,7 +60,7 @@ class RegisterProfessional(Resource):
         if not user:
             pwhash = generate_password_hash(data["password"])
             new_user = User(username=data["username"], password_hashed=pwhash, role="professional", status="pending",
-                            fullname=data["fullname"], service_type=int(data["service_type"]),
+                            email=data["email"], fullname=data["fullname"], service_type=int(data["service_type"]),
                             experience=int(data["experience"]), address=data["address"], pincode=int(data["pincode"]),
                             contact_number=int(data["contact_number"]))
             db.session.add(new_user)
@@ -118,6 +121,7 @@ class ProfileDetails(Resource):
         user = db.session.scalars(select(User).filter_by(username=username)).first()
         details = {
             "username": user.username,
+            "email": user.email,
             "fullname": user.fullname,
             "role": user.role,
             "service_name": user.provider.name if user.role == "professional" else None,
@@ -137,6 +141,7 @@ class EditProfile(Resource):
         user = db.session.scalars(select(User).filter_by(username=username)).first()
         if user.role == "professional":
             user.experience = data["experience"]
+        user.email = data["email"]
         user.fullname = data["fullname"]
         user.address = data["address"]
         user.pincode = data["pincode"]
@@ -166,6 +171,7 @@ class AdminHome(Resource):
             professionals_json.append({
                 "id": professional.id,
                 "username": professional.username,
+                "email": professional.email,
                 "fullname": professional.fullname,
                 "role": professional.role,
                 "service_name": professional.provider.name,

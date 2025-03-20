@@ -7,7 +7,7 @@
             <h5 class="card-header my-1 py-2">User Information</h5>
             <div class="card-body">
                 <p><b>Full Name : </b> {{ current_user.fullname }}</p>
-                <p><b>Role : </b> {{ current_user.role }}</p>
+                <p><b>Email : </b> {{ current_user.email }}</p>
                 <p v-if="current_user.role === 'professional'">
                     <b>Service Name : </b> {{ current_user.service_name }}
                 </p>
@@ -33,6 +33,11 @@
                 <label class="form-label text-black" for="fullname">Full Name</label>
                 <input class="form-control" id="fullname" maxlength="100" minlength="2" v-model="fullname" required=""
                     type="text" value="">
+            </div>
+            <div class="col-11 mb-2">
+                <label class="form-label text-black" for="email">Email</label>
+                <input class="form-control" id="email" maxlength="64" minlength="8" v-model="email" placeholder="Email"
+                    required="" type="email" value="">
             </div>
             <div class="col-11 mb-2" v-if="current_user.role === 'professional'">
                 <label class="form-label text-black" for="experience">Experience (in Years)</label>
@@ -70,6 +75,7 @@ const { showAlert } = useAlert();
 const current_user = ref({ role: 'role' });
 const editProfileModal = ref(false);
 const fullname = ref();
+const email = ref();
 const experience = ref();
 const address = ref();
 const pincode = ref();
@@ -105,6 +111,7 @@ onMounted(async () => {
 
 const showEditProfileModal = async () => {
     fullname.value = current_user.value.fullname;
+    email.value = current_user.value.email;
     experience.value = current_user.value.experience;
     address.value = current_user.value.address;
     pincode.value = current_user.value.pincode;
@@ -122,6 +129,7 @@ const editProfile = async () => {
             },
             body: JSON.stringify({
                 fullname: fullname.value,
+                email: email.value,
                 experience: experience.value,
                 address: address.value,
                 pincode: pincode.value,
