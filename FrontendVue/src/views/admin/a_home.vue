@@ -352,6 +352,12 @@
                 </tbody>
             </table>
         </div>
+        <form @submit.prevent="csvExport">
+            <button type="submit" class="btn btn-success m-3 px-3">
+                <i class="bi bi-download me-1"></i>Export CSV
+            </button>
+        </form>
+        <hr class="border mb-1">
     </div>
 </template>
 
@@ -596,6 +602,27 @@ const deleteUser = async (id) => {
         }
     } catch (error) {
         console.error('Error deleting user:', error);
+    }
+};
+
+const csvExport = async () => {
+    try {
+        const response = await fetch('http://127.0.0.1:5000/api/export', {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+            }
+        });
+        const data = await response.blob();
+        if (response.ok) {
+            const url = URL.createObjectURL(data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+    } catch (error) {
+        console.error('Error exporting csv:', error);
     }
 };
 </script>

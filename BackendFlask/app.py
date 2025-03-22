@@ -1,5 +1,6 @@
+from celery.result import AsyncResult
 from datetime import datetime, timezone, timedelta
-from flask import Flask, request, abort
+from flask import Flask, request, abort, send_from_directory
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, get_jwt, jwt_required, JWTManager
 from flask_restful import Api, Resource, reqparse
@@ -381,6 +382,14 @@ class AdminSearch(Resource):
         return {"service_history": service_history_json, "customers": customers_json, "professionals": professionals_json}, 200
 
 
+class ExportCSV(Resource):
+    @role_required("admin")
+    def get(self):
+        task = tasks.export_csv.delay()
+        res = AsyncResult(task.id)
+        return send_from_directory("static", res.result, as_attachment=True)
+
+
 # ---------------------------------------------- CUSTOMER --------------------------------------------
 
 
@@ -694,6 +703,7 @@ api.add_resource(AdminHome, "/api/admin")
 api.add_resource(ModifyService, "/api/service/add", "/api/service/<int:service_id>/edit", "/api/service/<int:service_id>/delete")
 api.add_resource(ModifyUser, "/api/user/<int:user_id>/approve", "/api/user/<int:user_id>/block", "/api/user/<int:user_id>/delete")
 api.add_resource(AdminSearch, "/api/admin/search/<string:search_by>/<string:search_text>")
+api.add_resource(ExportCSV, "/api/export")
 api.add_resource(CustomerHome, "/api/customer")
 api.add_resource(SelectProfessional, "/api/<int:service_id>/select_professional")
 api.add_resource(ManageServiceRequest, "/api/book/<int:service_id>/<int:professional_id>", "/api/edit/<int:request_id>", "/api/close/<int:request_id>")

@@ -7,6 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from jinja2 import Template
 from sqlalchemy import select
+import csv
 import smtplib
 
 
@@ -19,6 +20,26 @@ def send_email(recipient, subject, body):
     with smtplib.SMTP(host=app.config["MAIL_SERVER"], port=app.config["MAIL_PORT"]) as server:
         server.login(app.config["SENDER_EMAIL"], app.config["SENDER_PASSWORD"])
         server.send_message(msg)
+
+
+@celery.task
+def export_csv():
+    service_history = db.session.scalars(select(ServiceRequest)).all()
+    csv_file_name = f"requests_{int(datetime.now().timestamp())}.csv"
+    with open(f"static/{csv_file_name}", "w", newline="") as csvfile:
+        csv_file = csv.writer(csvfile, delimiter=",")
+        csv_file.writerow(["ID", "Service Name", "Customer Name", "Professional Name", "Time of Request", "Time of Completion", "Task", "Service Status"])
+        for service_request in service_history:
+            csv_file.writerow([service_request.id,
+                               service_request.service.name,
+                               service_request.customer.fullname,
+                               service_request.professional.fullname,
+                               service_request.time_of_request.strftime("%d-%m-%Y %H:%M:%S"),
+                               service_request.time_of_completion.strftime("%d-%m-%Y %H:%M:%S") if service_request.time_of_completion else "N/A",
+                               service_request.task,
+                               service_request.service_status
+                               ])
+    return csv_file_name
 
 
 @celery.task
