@@ -6,6 +6,7 @@ from flask_restful import Api, Resource, reqparse
 from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 from sqlalchemy import select, func, or_
+from sqlalchemy.orm import selectinload
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -150,6 +151,9 @@ class EditProfile(Resource):
         return {"message": "Profile edited successfully!"}, 200
 
 
+# ---------------------------------------------- ADMIN --------------------------------------------
+
+
 class AdminHome(Resource):
     @role_required("admin")
     def get(self):
@@ -183,6 +187,21 @@ class AdminHome(Resource):
                 "contact_number": professional.contact_number,
                 "created_at": professional.created_at.isoformat()
             })
+        customers = db.session.scalars(select(User).filter_by(role="customer").order_by(User.fullname.asc())).all()
+        customers_json = []
+        for customer in customers:
+            customers_json.append({
+                "id": customer.id,
+                "username": customer.username,
+                "email": customer.email,
+                "fullname": customer.fullname,
+                "role": customer.role,
+                "status": customer.status,
+                "address": customer.address,
+                "pincode": customer.pincode,
+                "contact_number": customer.contact_number,
+                "created_at": customer.created_at.isoformat()
+            })
         service_history = db.session.scalars(select(ServiceRequest).order_by(ServiceRequest.time_of_request.desc())).all()
         service_history_json = []
         for service_request in service_history:
@@ -196,7 +215,7 @@ class AdminHome(Resource):
                 "task": service_request.task,
                 "service_status": service_request.service_status
             })
-        return {"services": services_json, "professionals": professionals_json, "service_history": service_history_json}, 200
+        return {"services": services_json, "professionals": professionals_json, "customers": customers_json, "service_history": service_history_json}, 200
 
 
 class ModifyService(Resource):
@@ -249,7 +268,7 @@ class ModifyUser(Resource):
         if user is None:
             abort(404)
         if user.status == "verified":
-            return {"message": "User is already approved!"}, 403
+            abort(403, "User is already approved!")
         user.status = "verified"
         db.session.commit()
         return {"message": "User approved successfully!"}, 200
@@ -260,7 +279,7 @@ class ModifyUser(Resource):
         if user is None:
             abort(404)
         if user.status == "blocked":
-            return {"message": "User is already blocked!"}, 403
+            abort(403, "User is already blocked!")
         user.status = "blocked"
         db.session.commit()
         return {"message": "User blocked successfully!"}, 200
@@ -273,6 +292,96 @@ class ModifyUser(Resource):
         db.session.delete(user)
         db.session.commit()
         return {"message": "User deleted successfully!"}, 200
+
+
+class AdminSearch(Resource):
+    @role_required("admin")
+    def get(self, search_by, search_text):
+        service_history_json, customers_json, professionals_json = [], [], []
+        if search_by == "service_request":
+            service_history = db.session.scalars(select(ServiceRequest)
+                                                 .options(selectinload(ServiceRequest.customer),
+                                                          selectinload(ServiceRequest.professional),
+                                                          selectinload(ServiceRequest.service))
+                                                 .where(
+                                                     or_(ServiceRequest.service_status.ilike(f"%{search_text}%"),
+                                                         ServiceRequest.task.ilike(f"%{search_text}%"),
+                                                         ServiceRequest.customer.has(User.username.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.customer.has(User.fullname.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.professional.has(User.username.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.professional.has(User.fullname.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.service.has(Service.name.ilike(f"%{search_text}%"))))
+                                                 .order_by(ServiceRequest.time_of_request.desc())).all()
+            if not service_history:
+                return {"message": "No Service Request found!"}, 404
+            for service_request in service_history:
+                service_history_json.append({
+                    "id": service_request.id,
+                    "service": service_request.service.name,
+                    "customer": service_request.customer.fullname,
+                    "professional": service_request.professional.fullname,
+                    "time_of_request": service_request.time_of_request.isoformat(),
+                    "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
+                    "task": service_request.task,
+                    "service_status": service_request.service_status
+                })
+        elif search_by == "customer":
+            customers = db.session.scalars(select(User)
+                                           .where(User.role == "customer",
+                                                  or_(User.username.ilike(f"%{search_text}%"),
+                                                      User.fullname.ilike(f"%{search_text}%")
+                                                      ))).all()
+            if not customers:
+                return {"message": "No Customer found!"}, 404
+            for customer in customers:
+                customers_json.append({
+                    "id": customer.id,
+                    "username": customer.username,
+                    "email": customer.email,
+                    "fullname": customer.fullname,
+                    "role": customer.role,
+                    "status": customer.status,
+                    "address": customer.address,
+                    "pincode": customer.pincode,
+                    "contact_number": customer.contact_number,
+                    "created_at": customer.created_at.isoformat()
+                })
+        elif search_by == "professional":
+            professionals = db.session.scalars(select(User)
+                                               .options(selectinload(User.provider))
+                                               .where(User.role == "professional",
+                                                      or_(User.username.ilike(f"%{search_text}%"),
+                                                          User.email.ilike(f"%{search_text}%"),
+                                                          User.fullname.ilike(f"%{search_text}%"),
+                                                          User.address.ilike(f"%{search_text}%"),
+                                                          User.pincode.ilike(f"%{search_text}%"),
+                                                          User.contact_number.ilike(f"%{search_text}%"),
+                                                          User.status.ilike(f"%{search_text}%"),
+                                                          User.provider.has(Service.name.ilike(f"%{search_text}%"))
+                                                          ))).all()
+            if not professionals:
+                return {"message": "No Service Professional found!"}, 404
+            avg_ratings = dict(db.session.execute(select(Review.professional_id, func.avg(Review.rating)).group_by(Review.professional_id)).all())
+            for professional in professionals:
+                professionals_json.append({
+                    "id": professional.id,
+                    "username": professional.username,
+                    "email": professional.email,
+                    "fullname": professional.fullname,
+                    "role": professional.role,
+                    "service_name": professional.provider.name,
+                    "rating": avg_ratings[professional.id] if professional.id in avg_ratings.keys() else 0,
+                    "status": professional.status,
+                    "experience": professional.experience,
+                    "address": professional.address,
+                    "pincode": professional.pincode,
+                    "contact_number": professional.contact_number,
+                    "created_at": professional.created_at.isoformat()
+                })
+        return {"service_history": service_history_json, "customers": customers_json, "professionals": professionals_json}, 200
+
+
+# ---------------------------------------------- CUSTOMER --------------------------------------------
 
 
 class CustomerHome(Resource):
@@ -314,9 +423,7 @@ class SelectProfessional(Resource):
         professionals = db.session.scalars(select(User)
                                            .filter_by(role="professional", status="verified", service_type=service_id)
                                            .order_by(User.fullname.asc())).all()
-        avg_ratings = dict(db.session.execute(select(Review.professional_id, func.avg(Review.rating))
-                                              .group_by(Review.professional_id)
-                                              ).all())
+        avg_ratings = dict(db.session.execute(select(Review.professional_id, func.avg(Review.rating)).group_by(Review.professional_id)).all())
         professionals_json = []
         for professional in professionals:
             professionals_json.append({
@@ -355,7 +462,7 @@ class ManageServiceRequest(Resource):
         if history_entry is None:
             abort(404)
         if history_entry.service_status != "requested":
-            abort(403)
+            abort(403, "Service isn't in requested state, can't be edited!")
         time_of_request = datetime.fromisoformat(data["time_of_request"]).replace(tzinfo=timezone(timedelta(hours=5, minutes=30)))
         history_entry.time_of_request = time_of_request
         history_entry.task = data["task"]
@@ -367,8 +474,11 @@ class ManageServiceRequest(Resource):
         history_entry = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
         if history_entry is None:
             abort(404)
-        if history_entry.service_status == "requested":
-            history_entry.time_of_completion = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        if history_entry.service_status == "rejected":
+            abort(403, "Service is already rejected by professional")
+        if history_entry.service_status == "closed":
+            abort(403, "Service is already closed")
+        history_entry.time_of_completion = datetime.now(timezone(timedelta(hours=5, minutes=30)))
         history_entry.service_status = "closed"
         db.session.commit()
         return {"message": "Service closed successfully!"}, 200
@@ -393,17 +503,80 @@ class ServiceRemarks(Resource):
         return {"message": "Remarks submitted successfully!"}, 201
 
 
+class CustomerSearch(Resource):
+    @role_required("customer")
+    def get(self, search_by, search_text):
+        jwt_claims = get_jwt()
+        service_history_json, professionals_json  = [], []
+        if search_by == "service_request":
+            service_history = db.session.scalars(select(ServiceRequest)
+                                                 .options(selectinload(ServiceRequest.professional), selectinload(ServiceRequest.service))
+                                                 .where(ServiceRequest.customer_id == int(jwt_claims["sub"]),
+                                                     or_(ServiceRequest.service_status.ilike(f"%{search_text}%"),
+                                                         ServiceRequest.task.ilike(f"%{search_text}%"),
+                                                         ServiceRequest.professional.has(User.username.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.professional.has(User.fullname.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.professional.has(User.address.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.professional.has(User.pincode.ilike(f"%{search_text}%")),
+                                                         ServiceRequest.service.has(Service.name.ilike(f"%{search_text}%"))))
+                                                 .order_by(ServiceRequest.time_of_request.desc())).all()
+            if not service_history:
+                return {"message": "No Service Request found!"}, 404
+            for service_request in service_history:
+                service_history_json.append({
+                    "id": service_request.id,
+                    "service": service_request.service.name,
+                    "professional": service_request.professional.fullname,
+                    "time_of_request": service_request.time_of_request.isoformat(),
+                    "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
+                    "task": service_request.task,
+                    "service_status": service_request.service_status
+                })
+        elif search_by == "professional":
+            professionals = db.session.scalars(select(User)
+                                               .options(selectinload(User.provider))
+                                               .where(User.role == "professional",
+                                                      User.status == "verified",
+                                                      or_(User.username.ilike(f"%{search_text}%"),
+                                                          User.fullname.ilike(f"%{search_text}%"),
+                                                          User.address.ilike(f"%{search_text}%"),
+                                                          User.pincode.ilike(f"%{search_text}%"),
+                                                          User.contact_number.ilike(f"%{search_text}%"),
+                                                          User.provider.has(Service.name.ilike(f"%{search_text}%"))
+                                                          ))).all()
+            if not professionals:
+                return {"message": "No Service Professional found!"}, 404
+            avg_ratings = dict(db.session.execute(select(Review.professional_id, func.avg(Review.rating)).group_by(Review.professional_id)).all())
+            for professional in professionals:
+                professionals_json.append({
+                    "id": professional.id,
+                    "username": professional.username,
+                    "fullname": professional.fullname,
+                    "service_id": professional.provider.id,
+                    "service_name": professional.provider.name,
+                    "rating": avg_ratings[professional.id] if professional.id in avg_ratings.keys() else 0,
+                    "experience": professional.experience,
+                    "address": professional.address,
+                    "pincode": professional.pincode,
+                    "contact_number": professional.contact_number
+                })
+        return {"service_history": service_history_json, "professionals": professionals_json}, 200
+
+
+# ---------------------------------------------- PROFESSIONAL --------------------------------------------
+
+
 class ProfessionalHome(Resource):
     @role_required("professional")
     def get(self):
         jwt_claims = get_jwt()
         current_user = {"id": jwt_claims["sub"], "username": jwt_claims["username"], "role": jwt_claims["role"]}
-        today_services = db.session.scalars(select(ServiceRequest)
+        pending_services = db.session.scalars(select(ServiceRequest)
                                             .filter(ServiceRequest.professional_id == jwt_claims["sub"], ServiceRequest.service_status == "requested")
                                             .order_by(ServiceRequest.time_of_request.desc())).all()
-        today_services_json = []
-        for service_request in today_services:
-            today_services_json.append({
+        pending_services_json = []
+        for service_request in pending_services:
+            pending_services_json.append({
                 "id": service_request.id,
                 "customer": service_request.customer.fullname,
                 "address": service_request.customer.address,
@@ -448,7 +621,7 @@ class ProfessionalHome(Resource):
                 "service_status": service_request.service_status
             })
         services_json = {
-            "today_services": today_services_json,
+            "pending_services": pending_services_json,
             "ongoing_services": ongoing_services_json,
             "closed_services": closed_services_json
         }
@@ -462,7 +635,7 @@ class ServiceAction(Resource):
         if service_request is None:
             abort(404)
         if service_request.service_status != "requested":
-            return {"message": "This request is not in a pending state."}, 403
+            abort(403, "Service request is not in a pending state.")
         service_request.service_status = "accepted"
         db.session.commit()
         return {"message": "Request accepted successfully."}, 200
@@ -473,10 +646,42 @@ class ServiceAction(Resource):
         if service_request is None:
             abort(404)
         if service_request.service_status != "requested":
-            return {"message": "This request is not in a pending state."}, 403
+            abort(403, "Service request is not in a pending state.")
         service_request.service_status = "rejected"
         db.session.commit()
         return {"message": "Request rejected successfully."}, 200
+
+
+class ProfessionalSearch(Resource):
+    @role_required("professional")
+    def get(self, search_by, search_text):
+        jwt_claims = get_jwt()
+        service_history_json = []
+        if search_by == "service_request":
+            service_history = db.session.scalars(select(ServiceRequest)
+                                                 .options(selectinload(ServiceRequest.customer))
+                                                 .where(ServiceRequest.professional_id == int(jwt_claims["sub"]),
+                                                        or_(ServiceRequest.service_status.ilike(f"%{search_text}%"),
+                                                            ServiceRequest.task.ilike(f"%{search_text}%"),
+                                                            ServiceRequest.customer.has(User.username.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.customer.has(User.fullname.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.customer.has(User.address.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.customer.has(User.pincode.ilike(f"%{search_text}%"))))
+                                                 .order_by(ServiceRequest.time_of_request.desc())).all()
+            if not service_history:
+                return {"message": "No Results found!"}, 404
+            for service_request in service_history:
+                service_history_json.append({
+                    "id": service_request.id,
+                    "customer": service_request.customer.fullname,
+                    "address": service_request.customer.address,
+                    "pincode": service_request.customer.pincode,
+                    "contact_number": service_request.customer.contact_number,
+                    "time_of_request": service_request.time_of_request.isoformat(),
+                    "task": service_request.task,
+                    "service_status": service_request.service_status
+                })
+        return {"service_history": service_history_json}, 200
 
 
 api.add_resource(RegisterCustomer, "/api/register/customer")
@@ -488,12 +693,15 @@ api.add_resource(EditProfile, "/api/profile/edit/<string:username>")
 api.add_resource(AdminHome, "/api/admin")
 api.add_resource(ModifyService, "/api/service/add", "/api/service/<int:service_id>/edit", "/api/service/<int:service_id>/delete")
 api.add_resource(ModifyUser, "/api/user/<int:user_id>/approve", "/api/user/<int:user_id>/block", "/api/user/<int:user_id>/delete")
+api.add_resource(AdminSearch, "/api/admin/search/<string:search_by>/<string:search_text>")
 api.add_resource(CustomerHome, "/api/customer")
 api.add_resource(SelectProfessional, "/api/<int:service_id>/select_professional")
 api.add_resource(ManageServiceRequest, "/api/book/<int:service_id>/<int:professional_id>", "/api/edit/<int:request_id>", "/api/close/<int:request_id>")
 api.add_resource(ServiceRemarks, "/api/review/<int:request_id>")
+api.add_resource(CustomerSearch, "/api/customer/search/<string:search_by>/<string:search_text>")
 api.add_resource(ProfessionalHome, "/api/professional")
 api.add_resource(ServiceAction, "/api/service_request/<int:request_id>/accept", "/api/service_request/<int:request_id>/reject")
+api.add_resource(ProfessionalSearch, "/api/professional/search/<string:search_by>/<string:search_text>")
 
 
 if __name__ == "__main__":

@@ -185,6 +185,58 @@
                 </tbody>
             </table>
         </div>
+        <h2 class="m-3">Customers</h2>
+        <div class="table-responsive">
+            <table class="table table-striped table-primary table-hover">
+                <thead class="align-middle">
+                    <tr>
+                        <th style="min-width: 50px;">ID</th>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Address</th>
+                        <th>Pincode</th>
+                        <th>Contact No</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody class="table-group-divider align-middle">
+                    <tr v-for="user in customers">
+                        <td>
+                            <button class="btn btn-link" @click="viewUserDetails(user)">
+                                {{ user.id }}
+                            </button>
+                        </td>
+                        <td>{{ user.username }}</td>
+                        <td>{{ user.fullname }}</td>
+                        <td>{{ user.address }}</td>
+                        <td>{{ user.pincode }}</td>
+                        <td>{{ user.contact_number }}</td>
+                        <td>
+                            <span :class="`badge rounded-pill text-bg-${statusColor(user.status)}`">
+                                {{ user.status }}
+                            </span>
+                        </td>
+                        <td>
+                            <button v-if="user.status === 'blocked'" class="btn btn-success m-1 py-1"
+                                @click="showApproveModal(user.id)">
+                                <i class=" bi bi-shield-check"></i>
+                            </button>
+                            <button v-else-if="user.status !== 'blocked'" class="btn btn-warning m-1 py-1"
+                                @click="showBlockModal(user.id)">
+                                <i class="bi bi-ban"></i>
+                            </button>
+                            <button class="btn btn-danger m-1 py-1" @click="showDeleteUserModal(user.id)">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr v-if="customers.length === 0">
+                        <td colspan="8" class="text-center">No customers found.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <Modal v-model="userDetailsModal" cancel-button="Close">
             <template #header>Professional Details</template>
             <div class="table d-flex align-items-center justify-content-center m-0">
@@ -192,49 +244,55 @@
                     <tbody>
                         <tr>
                             <th>ID</th>
-                            <td>{{ professionalDetails.id }}</td>
+                            <td>{{ userDetails.id }}</td>
                         </tr>
                         <tr>
                             <th>Username</th>
-                            <td>{{ professionalDetails.username }}</td>
+                            <td>{{ userDetails.username }}</td>
+                        </tr>
+                        <tr>
+                            <th>Email</th>
+                            <td>{{ userDetails.email }}</td>
                         </tr>
                         <tr>
                             <th>Full Name</th>
-                            <td>{{ professionalDetails.fullname }}</td>
+                            <td>{{ userDetails.fullname }}</td>
                         </tr>
-                        <tr>
-                            <th>Service Name</th>
-                            <td>{{ professionalDetails.service_name }}</td>
-                        </tr>
-                        <tr>
-                            <th>Experience</th>
-                            <td>{{ professionalDetails.experience }} years</td>
-                        </tr>
-                        <tr>
-                            <th>Rating</th>
-                            <td>{{ professionalDetails.rating.toFixed(1) }}
-                                <StarRating :rating="professionalDetails.rating" />
-                            </td>
-                        </tr>
+                        <template v-if="userDetails.role === 'professional'">
+                            <tr>
+                                <th>Service Name</th>
+                                <td>{{ userDetails.service_name }}</td>
+                            </tr>
+                            <tr>
+                                <th>Experience</th>
+                                <td>{{ userDetails.experience }} years</td>
+                            </tr>
+                            <tr>
+                                <th>Rating</th>
+                                <td>{{ userDetails.rating.toFixed(1) }}
+                                    <StarRating :rating="userDetails.rating" />
+                                </td>
+                            </tr>
+                        </template>
                         <tr>
                             <th>Address</th>
-                            <td>{{ professionalDetails.address }}</td>
+                            <td>{{ userDetails.address }}</td>
                         </tr>
                         <tr>
                             <th>Pincode</th>
-                            <td>{{ professionalDetails.pincode }}</td>
+                            <td>{{ userDetails.pincode }}</td>
                         </tr>
                         <tr>
                             <th>Contact No</th>
-                            <td>{{ professionalDetails.contact_number }}</td>
+                            <td>{{ userDetails.contact_number }}</td>
                         </tr>
                         <tr>
                             <th>Status</th>
-                            <td>{{ professionalDetails.status }}</td>
+                            <td>{{ userDetails.status }}</td>
                         </tr>
                         <tr>
                             <th>Profile Created</th>
-                            <td>{{ formattedTime(professionalDetails.created_at) }}</td>
+                            <td>{{ formattedTime(userDetails.created_at) }}</td>
                         </tr>
                     </tbody>
                 </table>
@@ -274,8 +332,8 @@
                         <td>{{ request.customer }}</td>
                         <td>{{ request.professional }}</td>
                         <td>{{ request.service }}</td>
-                        <td class="fs9">{{ formattedTime(request.time_of_request) }}</td>
-                        <td class="fs9">
+                        <td>{{ formattedTime(request.time_of_request) }}</td>
+                        <td>
                             <span v-if="request.time_of_completion">
                                 {{ formattedTime(request.time_of_completion) }}
                             </span>
@@ -300,7 +358,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAlert } from '@/components/alert.js'
+import { useAlert } from '@/components/alert.js';
 import Modal from '@/components/Modal.vue';
 import Navbar from '@/components/Navbar.vue';
 import StarRating from '@/components/StarRating.vue';
@@ -310,9 +368,10 @@ const { showAlert } = useAlert();
 
 const services = ref([]);
 const professionals = ref([]);
+const customers = ref([]);
 const service_history = ref([]);
 const serviceDetails = ref({});
-const professionalDetails = ref({});
+const userDetails = ref({});
 
 const fetchAllData = async () => {
     try {
@@ -323,15 +382,15 @@ const fetchAllData = async () => {
             }
         });
         const data = await response.json();
-        if (!response.ok) {
-            const goto = '/' + data.role;
-            router.push({ path: goto });
-            showAlert(Object.values(data)[0], "warning");
-        }
         if (response.ok) {
             services.value = data.services;
             professionals.value = data.professionals;
+            customers.value = data.customers;
             service_history.value = data.service_history;
+        } else {
+            const goto = '/' + data.role;
+            router.push({ path: goto });
+            showAlert(Object.values(data)[0], "warning");
         }
     } catch (error) {
         console.error('Error fetching data:', error);
@@ -467,7 +526,7 @@ const deleteUserModal = ref(false);
 const user_id = ref(0);
 
 const viewUserDetails = async (user) => {
-    professionalDetails.value = user;
+    userDetails.value = user;
     userDetailsModal.value = true;
 };
 const showApproveModal = async (id) => {
