@@ -31,14 +31,21 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAlert } from '@/components/alert.js'
+import { useAlert } from '@/components/alert.js';
 
 const router = useRouter();
 const { showAlert } = useAlert();
 const username = ref('');
 const password = ref('');
+
+onMounted(async () => {
+    if (localStorage.getItem('token')) {
+        const redirect = '/' + localStorage.getItem('role');
+        router.push({ path: redirect });
+    }
+});
 
 const handleLogin = async () => {
     try {
@@ -56,6 +63,8 @@ const handleLogin = async () => {
         if (response.ok) {
             showAlert(data.message, "success");
             localStorage.setItem('token', data.token);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('role', data.role);
             const goto = '/' + data.role;
             router.push({ path: goto });
         } else {

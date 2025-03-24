@@ -1,6 +1,7 @@
 from celery.result import AsyncResult
 from datetime import datetime, timezone, timedelta
 from flask import Flask, request, abort, send_from_directory
+from flask_caching import Cache
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, get_jwt, jwt_required, JWTManager
 from flask_restful import Api, Resource, reqparse
@@ -13,6 +14,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 app = Flask(__name__)
 app.config.from_object("application.config.Config")
 api = Api(app)
+cache = Cache(app)
 cors = CORS(app)
 db = SQLAlchemy(app)
 jwt = JWTManager(app)
@@ -86,13 +88,13 @@ class Login(Resource):
                 if user.role == "admin":
                     access_token = create_access_token(identity=str(user.id),
                                                        additional_claims={"username": user.username, "role": user.role})
-                    return {"token": access_token, "role": user.role, "message": "Logged in Successfully"}, 200
+                    return {"token": access_token, "role": user.role, "username": user.username, "message": "Logged in Successfully"}, 200
 
                 elif user.role == "customer":
                     if user.status != "blocked":
                         access_token = create_access_token(identity=str(user.id),
                                                            additional_claims={"username": user.username, "role": user.role})
-                        return {"token": access_token, "role": user.role, "message": "Logged in Successfully"}, 200
+                        return {"token": access_token, "role": user.role, "username": user.username, "message": "Logged in Successfully"}, 200
                     elif user.status == "blocked":
                         return {"message": "You are not authorised to login!"}, 403
 
@@ -100,7 +102,7 @@ class Login(Resource):
                     if user.status == "verified":
                         access_token = create_access_token(identity=str(user.id),
                                                            additional_claims={"username": user.username, "role": user.role})
-                        return {"token": access_token, "role": user.role, "message": "Logged in Successfully"}, 200
+                        return {"token": access_token, "role": user.role, "username": user.username, "message": "Logged in Successfully"}, 200
                     elif user.status == "pending":
                         return {"message": "Profile is under verification, Please try later!"}, 403
                     elif user.status == "blocked":
@@ -108,6 +110,7 @@ class Login(Resource):
 
 
 class ServicesList(Resource):
+    @cache.cached(timeout=3600, key_prefix="services_list")
     def get(self):
         services = db.session.scalars(select(Service).order_by(Service.name.asc())).all()
         services_json = []
@@ -116,10 +119,12 @@ class ServicesList(Resource):
         return {"services": services_json}, 200
 
 
-class ProfileDetails(Resource):
+class UserProfile(Resource):
     @jwt_required()
-    def get(self):
-        username = get_jwt()["username"]
+    @cache.memoize(timeout=3600)
+    def get(self, username):
+        if username != get_jwt()["username"]:
+            abort(403)
         user = db.session.scalars(select(User).filter_by(username=username)).first()
         details = {
             "username": user.username,
@@ -135,10 +140,10 @@ class ProfileDetails(Resource):
         }
         return {"details": details}, 200
 
-
-class EditProfile(Resource):
     @jwt_required()
     def put(self, username):
+        if username != get_jwt()["username"]:
+            abort(403)
         data = request.json
         user = db.session.scalars(select(User).filter_by(username=username)).first()
         if user.role == "professional":
@@ -149,6 +154,7 @@ class EditProfile(Resource):
         user.pincode = data["pincode"]
         user.contact_number = data["contact_number"]
         db.session.commit()
+        cache.delete_memoized(self.get, self, username)
         return {"message": "Profile edited successfully!"}, 200
 
 
@@ -237,6 +243,7 @@ class ModifyService(Resource):
         )
         db.session.add(new_service)
         db.session.commit()
+        cache.delete("services_list")
         return {"message": "Service added successfully!"}, 201
 
     @role_required("admin")
@@ -250,6 +257,7 @@ class ModifyService(Resource):
         service.time_required = data["time_required"]
         service.description = data["description"]
         db.session.commit()
+        cache.delete("services_list")
         return {"message": "Service updated successfully!"}, 200
 
     @role_required("admin")
@@ -258,6 +266,7 @@ class ModifyService(Resource):
         if service is None:
             abort(404)
         db.session.delete(service)
+        cache.delete("services_list")
         db.session.commit()
         return {"message": "Service and all associated data have been deleted successfully."}, 200
 
@@ -697,8 +706,7 @@ api.add_resource(RegisterCustomer, "/api/register/customer")
 api.add_resource(RegisterProfessional, "/api/register/professional")
 api.add_resource(Login, "/api/login")
 api.add_resource(ServicesList, "/api/services")
-api.add_resource(ProfileDetails, "/api/profile")
-api.add_resource(EditProfile, "/api/profile/edit/<string:username>")
+api.add_resource(UserProfile, "/api/profile/<string:username>", "/api/profile/edit/<string:username>")
 api.add_resource(AdminHome, "/api/admin")
 api.add_resource(ModifyService, "/api/service/add", "/api/service/<int:service_id>/edit", "/api/service/<int:service_id>/delete")
 api.add_resource(ModifyUser, "/api/user/<int:user_id>/approve", "/api/user/<int:user_id>/block", "/api/user/<int:user_id>/delete")

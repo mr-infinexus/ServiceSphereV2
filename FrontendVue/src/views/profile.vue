@@ -65,14 +65,14 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAlert } from '@/components/alert.js'
+import { useAlert } from '@/components/alert.js';
 import Modal from '@/components/Modal.vue';
 import Navbar from '@/components/Navbar.vue';
 
 const router = useRouter();
 const { showAlert } = useAlert();
 
-const current_user = ref({ role: 'role' });
+const current_user = ref({ role: localStorage.getItem('role') });
 const editProfileModal = ref(false);
 const fullname = ref();
 const email = ref();
@@ -88,7 +88,7 @@ const formattedTime = (timeString) => {
 
 const fetchAllData = async () => {
     try {
-        const response = await fetch('http://127.0.0.1:5000/api/profile', {
+        const response = await fetch(`http://127.0.0.1:5000/api/profile/${localStorage.getItem('username')}`, {
             method: 'GET',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
