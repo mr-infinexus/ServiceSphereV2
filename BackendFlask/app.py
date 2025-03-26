@@ -391,6 +391,30 @@ class AdminSearch(Resource):
         return {"service_history": service_history_json, "customers": customers_json, "professionals": professionals_json}, 200
 
 
+class AdminSummary(Resource):
+    @role_required("admin")
+    def get(self):
+        user_count = db.session.scalars(select(func.count()).select_from(User)).one()
+        revenue = db.session.scalars(select(func.sum(Service.price))
+                                     .join(ServiceRequest.service)
+                                     .where(ServiceRequest.service_status == "closed",
+                                            ServiceRequest.time_of_completion.is_not(None))).one()
+        request_count = db.session.scalars(select(func.count()).select_from(ServiceRequest)).one()
+        stats = {"users": user_count, "revenue": int(revenue), "requests": request_count}
+        rating_counts = dict(db.session.execute(select(Review.rating, func.count()).group_by(Review.rating)).all())
+        service_requests = dict(db.session.execute(select(ServiceRequest.service_status, func.count()).group_by(ServiceRequest.service_status)).all())
+        service_counts = {"Requested": 0, "Accepted": 0, "Rejected": 0, "Closed": 0}
+        if "requested" in service_requests.keys():
+            service_counts["Requested"] = service_requests["requested"]
+        if "accepted" in service_requests.keys():
+            service_counts["Accepted"] = service_requests["accepted"]
+        if "rejected" in service_requests.keys():
+            service_counts["Rejected"] = service_requests["rejected"]
+        if "closed" in service_requests.keys():
+            service_counts["Closed"] = service_requests["closed"]
+        return {"stats": stats, "rating_counts": rating_counts, "service_counts": service_counts}, 200
+
+
 class ExportCSV(Resource):
     @role_required("admin")
     def get(self):
@@ -581,6 +605,28 @@ class CustomerSearch(Resource):
         return {"service_history": service_history_json, "professionals": professionals_json}, 200
 
 
+class CustomerSummary(Resource):
+    @role_required("customer")
+    def get(self):
+        jwt_claims = get_jwt()
+        rating_counts = dict(db.session.execute(select(Review.rating, func.count())
+                                                .where(ServiceRequest.customer_id == int(jwt_claims["sub"]))
+                                                .group_by(Review.rating)).all())
+        service_requests = dict(db.session.execute(select(ServiceRequest.service_status, func.count())
+                                                   .where(ServiceRequest.customer_id == int(jwt_claims["sub"]))
+                                                   .group_by(ServiceRequest.service_status)).all())
+        service_counts = {"Requested": 0, "Accepted": 0, "Rejected": 0, "Closed": 0}
+        if "requested" in service_requests.keys():
+            service_counts["Requested"] = service_requests["requested"]
+        if "accepted" in service_requests.keys():
+            service_counts["Accepted"] = service_requests["accepted"]
+        if "rejected" in service_requests.keys():
+            service_counts["Rejected"] = service_requests["rejected"]
+        if "closed" in service_requests.keys():
+            service_counts["Closed"] = service_requests["closed"]
+        return {"rating_counts": rating_counts, "service_counts": service_counts}, 200
+
+
 # ---------------------------------------------- PROFESSIONAL --------------------------------------------
 
 
@@ -702,6 +748,37 @@ class ProfessionalSearch(Resource):
         return {"service_history": service_history_json}, 200
 
 
+class ProfessionalSummary(Resource):
+    @role_required("professional")
+    def get(self):
+        jwt_claims = get_jwt()
+        revenue = db.session.scalars(select(func.sum(Service.price))
+                                     .join(ServiceRequest.service)
+                                     .where(ServiceRequest.professional_id == int(jwt_claims["sub"]),
+                                            ServiceRequest.service_status == "closed",
+                                            ServiceRequest.time_of_completion.is_not(None))).one()
+        request_count = db.session.scalars(select(func.count())
+                                           .select_from(ServiceRequest)
+                                           .where(ServiceRequest.professional_id == int(jwt_claims["sub"]))).one()
+        stats = {"revenue": int(revenue), "requests": request_count}
+        rating_counts = dict(db.session.execute(select(Review.rating, func.count())
+                                                .where(ServiceRequest.professional_id == int(jwt_claims["sub"]))
+                                                .group_by(Review.rating)).all())
+        service_requests = dict(db.session.execute(select(ServiceRequest.service_status, func.count())
+                                                   .where(ServiceRequest.professional_id == int(jwt_claims["sub"]))
+                                                   .group_by(ServiceRequest.service_status)).all())
+        service_counts = {"Requested": 0, "Accepted": 0, "Rejected": 0, "Closed": 0}
+        if "requested" in service_requests.keys():
+            service_counts["Requested"] = service_requests["requested"]
+        if "accepted" in service_requests.keys():
+            service_counts["Accepted"] = service_requests["accepted"]
+        if "rejected" in service_requests.keys():
+            service_counts["Rejected"] = service_requests["rejected"]
+        if "closed" in service_requests.keys():
+            service_counts["Closed"] = service_requests["closed"]
+        return {"stats": stats, "rating_counts": rating_counts, "service_counts": service_counts}, 200
+
+
 api.add_resource(RegisterCustomer, "/api/register/customer")
 api.add_resource(RegisterProfessional, "/api/register/professional")
 api.add_resource(Login, "/api/login")
@@ -711,15 +788,18 @@ api.add_resource(AdminHome, "/api/admin")
 api.add_resource(ModifyService, "/api/service/add", "/api/service/<int:service_id>/edit", "/api/service/<int:service_id>/delete")
 api.add_resource(ModifyUser, "/api/user/<int:user_id>/approve", "/api/user/<int:user_id>/block", "/api/user/<int:user_id>/delete")
 api.add_resource(AdminSearch, "/api/admin/search/<string:search_by>/<string:search_text>")
+api.add_resource(AdminSummary, "/api/admin/summary")
 api.add_resource(ExportCSV, "/api/export")
 api.add_resource(CustomerHome, "/api/customer")
 api.add_resource(SelectProfessional, "/api/<int:service_id>/select_professional")
 api.add_resource(ManageServiceRequest, "/api/book/<int:service_id>/<int:professional_id>", "/api/edit/<int:request_id>", "/api/close/<int:request_id>")
 api.add_resource(ServiceRemarks, "/api/review/<int:request_id>")
 api.add_resource(CustomerSearch, "/api/customer/search/<string:search_by>/<string:search_text>")
+api.add_resource(CustomerSummary, "/api/customer/summary")
 api.add_resource(ProfessionalHome, "/api/professional")
 api.add_resource(ServiceAction, "/api/service_request/<int:request_id>/accept", "/api/service_request/<int:request_id>/reject")
 api.add_resource(ProfessionalSearch, "/api/professional/search/<string:search_by>/<string:search_text>")
+api.add_resource(ProfessionalSummary, "/api/professional/summary")
 
 
 if __name__ == "__main__":
