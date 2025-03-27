@@ -20,13 +20,13 @@
                     </tr>
                 </thead>
                 <tbody class="table-group-divider align-middle">
-                    <tr v-for="request in today_services">
+                    <tr v-for="request in pending_services">
                         <td>{{ request.id }}</td>
                         <td>{{ request.customer }}</td>
                         <td>{{ request.address }}</td>
                         <td>{{ request.pincode }}</td>
                         <td>{{ request.contact_number }}</td>
-                        <td class="fs9">{{ formattedTime(request.time_of_request) }}</td>
+                        <td>{{ formattedTime(request.time_of_request) }}</td>
                         <td>{{ request.task }}</td>
                         <td>
                             <button class="btn btn-success mx-1 py-1" @click="showAcceptModal(request.id)">
@@ -37,7 +37,7 @@
                             </button>
                         </td>
                     </tr>
-                    <tr v-if="today_services.length === 0">
+                    <tr v-if="pending_services.length === 0">
                         <td colspan="8" class="text-center">No pending services found.</td>
                     </tr>
                 </tbody>
@@ -74,7 +74,7 @@
                         <td>{{ request.address }}</td>
                         <td>{{ request.pincode }}</td>
                         <td>{{ request.contact_number }}</td>
-                        <td class="fs9">{{ formattedTime(request.time_of_request) }}</td>
+                        <td>{{ formattedTime(request.time_of_request) }}</td>
                         <td>{{ request.task }}</td>
                         <td>
                             <span :class="`badge rounded-pill text-bg-${statusColor(request.service_status)}`">
@@ -111,7 +111,7 @@
                         <td>{{ request.address }}</td>
                         <td>{{ request.pincode }}</td>
                         <td>{{ request.contact_number }}</td>
-                        <td class="fs9">{{ formattedTime(request.time_of_request) }}</td>
+                        <td>{{ formattedTime(request.time_of_request) }}</td>
                         <td>{{ request.task }}</td>
                         <td>
                             <span :class="`badge rounded-pill text-bg-${statusColor(request.service_status)}`">
@@ -139,7 +139,7 @@ const router = useRouter();
 const { showAlert } = useAlert();
 
 const current_user = ref({});
-const today_services = ref([]);
+const pending_services = ref([]);
 const ongoing_services = ref([]);
 const closed_services = ref([]);
 
@@ -154,7 +154,7 @@ const fetchAllData = async () => {
         const data = await response.json();
         if (response.ok) {
             current_user.value = data.current_user;
-            today_services.value = data.services.today_services;
+            pending_services.value = data.services.pending_services;
             ongoing_services.value = data.services.ongoing_services;
             closed_services.value = data.services.closed_services;
         } else {

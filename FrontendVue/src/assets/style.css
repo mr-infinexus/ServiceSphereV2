@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Commissioner:wght@400..800&display=swap');
 
 :root {
     --color-body: rgb(232, 237, 242);
@@ -85,10 +85,6 @@ body {
     text-align: center;
 }
 
-.fs9 {
-    font-size: 90%;
-}
-
 h1,
 h2,
 h3,
@@ -152,5 +148,10 @@ label {
 
 td {
     padding: 0.25rem 0.25rem !important;
+    font-size: 90%;
     white-space: nowrap;
+}
+
+.badge {
+    font-size: 80%;
 }

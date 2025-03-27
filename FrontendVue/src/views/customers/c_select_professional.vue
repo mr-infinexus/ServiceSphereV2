@@ -42,7 +42,7 @@
                 </tbody>
             </table>
         </div>
-        <Modal v-model="bookServiceModal" confirm-button="Confirm" @confirm="bookService">
+        <Modal v-model="bookServiceModal" confirm-button="Confirm" @submit="bookService">
             <template #header>Book Service</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11 mb-2">
@@ -58,7 +58,7 @@
                 <div class="col-11 mb-2">
                     <label for="time_of_request" class="form-label text-black">Time of Request</label>
                     <input type="datetime-local" class="form-control" id="time_of_request" v-model="time_of_request"
-                        :min="today" required>
+                        :min="today" required="">
                 </div>
                 <div class="col-11 mb-2">
                     <label class="form-label text-black" for="task">Task</label>
@@ -73,7 +73,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAlert } from '@/components/alert.js'
+import { useAlert } from '@/components/alert.js';
 import Modal from '@/components/Modal.vue';
 import Navbar from '@/components/Navbar.vue';
 import StarRating from '@/components/StarRating.vue';

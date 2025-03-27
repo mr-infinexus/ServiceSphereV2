@@ -3,19 +3,29 @@
     <router-view />
     <div>
         <h2 class="m-3">Search</h2>
-        <form @submit.prevent="handleCustomerSearch">
-            <div class="d-flex align-items-center justify-content-center">
-                <label class="form-label me-2">Search by:</label>
-                <select class="form-select d-inline w-25 me-2" v-model="search_by" required>
-                    <option selected disabled value="">Search by</option>
-                    <option value="service_request">Service Requests</option>
-                    <option value="professional">Professionals</option>
-                </select>
-                <input class="form-control d-inline w-25" type="text" v-model="search_text"
-                    placeholder="Enter search text" required>
-                <button type="submit" class="btn btn-dark mx-2 px-2">Search</button>
+        <div class="d-flex align-items-center justify-content-center m-0">
+            <div class="col-12 col-lg-10">
+                <form @submit.prevent="handleCustomerSearch">
+                    <div class="row align-items-center justify-content-center">
+                        <div class="col-12 col-md-4 mb-3 mb-md-0 d-flex align-items-center px-2">
+                            <label class="form-label me-2 mb-0" style="white-space: nowrap;">Search by :</label>
+                            <select class="form-select" v-model="search_by" required="">
+                                <option selected disabled value="">Search by</option>
+                                <option value="service_request">Service Requests</option>
+                                <option value="professional">Professionals</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4 mb-3 mb-md-0 px-2">
+                            <input class="form-control" type="text" v-model="search_text"
+                                placeholder="Enter search text" required>
+                        </div>
+                        <div class="col-12 col-md-2 mb-3 mb-md-0 text-center text-md-start px-2">
+                            <button type="submit" class="btn btn-dark px-2">Search</button>
+                        </div>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
         <hr class="border">
         <section v-if="service_history.length !== 0">
             <h2 class="m-3">Service History</h2>
@@ -73,7 +83,7 @@
                 </table>
             </div>
         </section>
-        <Modal v-model="editServiceModal" type="warning" confirm-button="Confirm" @confirm="editServiceRequest">
+        <Modal v-model="editServiceModal" type="warning" confirm-button="Confirm" @submit="editServiceRequest">
             <template #header>Edit Service</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11 mb-2">
@@ -102,7 +112,7 @@
             <template #header>Close Service Request</template>
             <p class="m-2">Are you sure you want to close this service request?</p>
         </Modal>
-        <Modal v-model="serviceRemarksModal" confirm-button="Confirm" @confirm="serviceRemarks">
+        <Modal v-model="serviceRemarksModal" confirm-button="Confirm" @submit="serviceRemarks">
             <template #header>Add Service Remarks</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11 mb-2">
@@ -180,7 +190,7 @@
                 </table>
             </div>
         </section>
-        <Modal v-model="bookServiceModal" confirm-button="Confirm" @confirm="bookService">
+        <Modal v-model="bookServiceModal" confirm-button="Confirm" @submit="bookService">
             <template #header>Book Service</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11 mb-2">
@@ -196,7 +206,7 @@
                 <div class="col-11 mb-2">
                     <label for="time_of_request" class="form-label text-black">Time of Request</label>
                     <input type="datetime-local" class="form-control" id="time_of_request" v-model="time_of_request"
-                        :min="today" required>
+                        :min="today" required="">
                 </div>
                 <div class="col-11 mb-2">
                     <label class="form-label text-black" for="task">Task</label>

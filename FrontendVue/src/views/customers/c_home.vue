@@ -41,8 +41,8 @@
                         <td>{{ request.id }}</td>
                         <td>{{ request.service }}</td>
                         <td>{{ request.professional }}</td>
-                        <td class="fs9">{{ formattedTime(request.time_of_request) }}</td>
-                        <td class="fs9">
+                        <td>{{ formattedTime(request.time_of_request) }}</td>
+                        <td>
                             <span v-if="request.time_of_completion">
                                 {{ formattedTime(request.time_of_completion) }}
                             </span>
@@ -78,7 +78,7 @@
                 </tbody>
             </table>
         </div>
-        <Modal v-model="editServiceModal" type="warning" confirm-button="Confirm" @confirm="editServiceRequest">
+        <Modal v-model="editServiceModal" type="warning" confirm-button="Confirm" @submit="editServiceRequest">
             <template #header>Edit Service</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11 mb-2">
@@ -107,7 +107,7 @@
             <template #header>Close Service Request</template>
             <p class="m-2">Are you sure you want to close this service request?</p>
         </Modal>
-        <Modal v-model="serviceRemarksModal" confirm-button="Confirm" @confirm="serviceRemarks">
+        <Modal v-model="serviceRemarksModal" confirm-button="Confirm" @submit="serviceRemarks">
             <template #header>Add Service Remarks</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11 mb-2">

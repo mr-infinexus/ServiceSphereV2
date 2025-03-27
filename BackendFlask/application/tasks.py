@@ -6,7 +6,7 @@ from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from jinja2 import Template
-from sqlalchemy import select
+from sqlalchemy import select, func
 import csv
 import smtplib
 
@@ -61,18 +61,19 @@ def daily_reminder():
 def monthly_report():
     customers = db.session.scalars(select(User).filter_by(role="customer")).all()
     for customer in customers:
-        service_requests = db.session.scalars(select(ServiceRequest).filter_by(customer_id=customer.id)).all()
+        service_requests = dict(db.session.execute(select(ServiceRequest.service_status, func.count())
+                                                   .where(ServiceRequest.customer_id == customer.id)
+                                                   .group_by(ServiceRequest.service_status)).all())
         if service_requests:
             service_counts = {"Requested": 0, "Accepted": 0, "Rejected": 0, "Closed": 0}
-            for request in service_requests:
-                if request.service_status == "requested":
-                    service_counts["Requested"] += 1
-                elif request.service_status == "accepted":
-                    service_counts["Accepted"] += 1
-                elif request.service_status == "rejected":
-                    service_counts["Rejected"] += 1
-                elif request.service_status == "closed":
-                    service_counts["Closed"] += 1
+            if "requested" in service_requests.keys():
+                service_counts["Requested"] = service_requests["requested"]
+            if "accepted" in service_requests.keys():
+                service_counts["Accepted"] = service_requests["accepted"]
+            if "rejected" in service_requests.keys():
+                service_counts["Rejected"] = service_requests["rejected"]
+            if "closed" in service_requests.keys():
+                service_counts["Closed"] = service_requests["closed"]
             with open("templates/c_monthly.html") as file:
                 template = Template(file.read())
                 subject = f"Monthly Activity Report of {datetime.now().strftime("%B %Y")} for {customer.fullname}"
@@ -82,5 +83,5 @@ def monthly_report():
 
 @celery.on_after_configure.connect
 def setup_periodic_tasks(sender, **kwargs):
-    sender.add_periodic_task(crontab(hour=6, minute=0), daily_reminder.s(), name="Daily Reminder")
-    sender.add_periodic_task(crontab(hour="6", minute=0, day_of_month="1"), monthly_report.s(), name="Monthly Report")
+    sender.add_periodic_task(crontab(hour="6", minute="30"), daily_reminder.s(), name="Daily Reminder")
+    sender.add_periodic_task(crontab(hour="7", minute="30", day_of_month="1"), monthly_report.s(), name="Monthly Report")

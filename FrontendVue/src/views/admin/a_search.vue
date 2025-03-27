@@ -3,20 +3,30 @@
     <router-view />
     <div>
         <h2 class="m-3">Search</h2>
-        <form @submit.prevent="handleAdminSearch">
-            <div class="d-flex align-items-center justify-content-center">
-                <label class="form-label me-2">Search by :</label>
-                <select class="form-select d-inline w-25 me-2" v-model="search_by" required>
-                    <option selected disabled value="">Search by</option>
-                    <option value="service_request">Service Requests</option>
-                    <option value="customer">Customers</option>
-                    <option value="professional">Professionals</option>
-                </select>
-                <input class="form-control d-inline w-25" type="text" v-model="search_text"
-                    placeholder="Enter search text" required>
-                <button type="submit" class="btn btn-dark mx-2 px-2">Search</button>
+        <div class="d-flex align-items-center justify-content-center m-0">
+            <div class="col-12 col-lg-10">
+                <form @submit.prevent="handleAdminSearch">
+                    <div class="row align-items-center justify-content-center">
+                        <div class="col-12 col-md-4 mb-3 mb-md-0 d-flex align-items-center px-2">
+                            <label class="form-label me-2 mb-0" style="white-space: nowrap;">Search by :</label>
+                            <select class="form-select" v-model="search_by" required="">
+                                <option selected disabled value="">Search by</option>
+                                <option value="service_request">Service Requests</option>
+                                <option value="customer">Customers</option>
+                                <option value="professional">Professionals</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-md-4 mb-3 mb-md-0 px-2">
+                            <input class="form-control" type="text" v-model="search_text"
+                                placeholder="Enter search text" required>
+                        </div>
+                        <div class="col-12 col-md-2 mb-3 mb-md-0 text-center text-md-start px-2">
+                            <button type="submit" class="btn btn-dark px-2">Search</button>
+                        </div>
+                    </div>
+                </form>
             </div>
-        </form>
+        </div>
         <hr class="border">
         <section v-if="service_history.length !== 0">
             <h2 class="m-3">Service Requests</h2>

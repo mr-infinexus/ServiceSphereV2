@@ -3,20 +3,20 @@
     <router-view />
     <h2 class="m-4">Welcome to your profile, @{{ current_user.username }} !</h2>
     <div class="d-flex align-items-center justify-content-center">
-        <div class="card w-50 bg-primary-subtle text-primary-emphasis rounded">
-            <h5 class="card-header my-1 py-2">User Information</h5>
-            <div class="card-body">
-                <p><b>Full Name : </b> {{ current_user.fullname }}</p>
-                <p><b>Email : </b> {{ current_user.email }}</p>
+        <div class="card bg-primary-subtle text-primary-emphasis rounded">
+            <h5 class="card-header py-3">User Information</h5>
+            <div class="card-body px-5">
+                <p class="fs-5"><b>{{ current_user.fullname }}</b></p>
+                <p><i class="bi bi-envelope-at-fill fs-5 me-1"></i> {{ current_user.email }}</p>
                 <p v-if="current_user.role === 'professional'">
-                    <b>Service Name : </b> {{ current_user.service_name }}
+                    <i class="bi bi-tools fs-5 me-1"></i> {{ current_user.service_name }}
                 </p>
                 <p v-if="current_user.role === 'professional'">
-                    <b>Experience : </b> {{ current_user.experience }} Years
+                    <i class="bi bi-person-fill-gear fs-5 me-1"></i> {{ current_user.experience }} Years
                 </p>
-                <p><b>Address : </b> {{ current_user.address }}</p>
-                <p><b>Pincode : </b> {{ current_user.pincode }}</p>
-                <p><b>Contact Number : </b> {{ current_user.contact_number }}</p>
+                <p><i class="bi bi-geo-alt-fill fs-5 me-1"></i> {{ current_user.address }}</p>
+                <p><i class="bi bi-geo-fill fs-5 me-1"></i> {{ current_user.pincode }}</p>
+                <p><i class="bi bi-telephone-fill fs-5 me-1"></i> {{ current_user.contact_number }}</p>
                 <p><b>Profile Created On : </b> {{ formattedTime(current_user.created_at) }}</p>
             </div>
         </div>
@@ -26,37 +26,38 @@
             <i class="bi bi-pencil-square"></i> Edit
         </button>
     </div>
-    <Modal v-model="editProfileModal" confirm-button="Confirm" @confirm="editProfile">
+    <Modal v-model="editProfileModal" confirm-button="Confirm" @submit="editProfile">
         <template #header>Edit Profile</template>
         <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
             <div class="col-11 mb-2">
                 <label class="form-label text-black" for="fullname">Full Name</label>
                 <input class="form-control" id="fullname" maxlength="100" minlength="2" v-model="fullname" required=""
-                    type="text" value="">
+                    type="text">
             </div>
             <div class="col-11 mb-2">
                 <label class="form-label text-black" for="email">Email</label>
                 <input class="form-control" id="email" maxlength="64" minlength="8" v-model="email" placeholder="Email"
-                    required="" type="email" value="">
+                    required="" type="email">
             </div>
             <div class="col-11 mb-2" v-if="current_user.role === 'professional'">
                 <label class="form-label text-black" for="experience">Experience (in Years)</label>
                 <input class="form-control" id="experience" max="60" min="0" v-model="experience" required=""
-                    type="number" value="">
+                    type="number">
             </div>
             <div class="col-11 mb-2">
                 <label class="form-label text-black" for="address">Address</label>
-                <textarea class="form-control" id="address" v-model="address" rows="1" value=""></textarea>
+                <textarea class="form-control" id="address" v-model="address" maxlength="128" required=""
+                    rows="1"></textarea>
             </div>
             <div class="col-11 mb-2">
                 <label class="form-label text-black" for="pincode">Pincode</label>
                 <input class="form-control" id="pincode" max="999999" min="100000" v-model="pincode" required=""
-                    type="number" value="">
+                    type="number">
             </div>
             <div class="col-11 mb-3">
                 <label class="form-label text-black" for="contact_number">Contact Number</label>
                 <input class="form-control" id="contact_number" max="9999999999" min="1000000000"
-                    v-model="contact_number" required="" type="number" value="">
+                    v-model="contact_number" required="" type="number">
             </div>
         </div>
     </Modal>

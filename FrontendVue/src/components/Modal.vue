@@ -10,11 +10,13 @@
                 </div>
 
                 <div class="modal-body py-2">
-                    <slot></slot>
+                    <form id="modalForm" ref="modalForm" @submit.prevent="handleSubmit" novalidate>
+                        <slot></slot>
+                    </form>
                 </div>
 
                 <div class="modal-footer py-1">
-                    <button v-if="confirmButton" type="submit" :class="`btn btn-${type} btn-sm`" @click="confirmModal">
+                    <button type="submit" form="modalForm" v-if="confirmButton" :class="`btn btn-${type} btn-sm`">
                         {{ confirmButton }}
                     </button>
                     <button type="button" class="btn btn-secondary btn-sm" @click="closeModal">
@@ -27,7 +29,7 @@
 </template>
 
 <script setup>
-import { onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
 
 const props = defineProps({
     modelValue: {
@@ -53,17 +55,32 @@ const props = defineProps({
     }
 })
 
-const emit = defineEmits(['update:modelValue', 'confirm', 'cancel'])
+const emit = defineEmits(['update:modelValue', 'confirm', 'cancel', 'submit'])
+
+const modalForm = ref(null)
 
 const closeModal = () => {
     emit('update:modelValue', false)
     emit('cancel')
 };
 
-const confirmModal = () => {
+const handleSubmit = (event) => {
+    if (modalForm.value && !modalForm.value.checkValidity()) {
+        event.preventDefault();
+        modalForm.value.classList.add('was-validated');
+        return;
+    }
+
     emit('confirm')
+    emit('submit', event)
     emit('update:modelValue', false)
 };
+
+watch(() => props.modelValue, (newValue) => {
+    if (newValue && modalForm.value) {
+        modalForm.value.classList.remove('was-validated');
+    }
+});
 
 if (props.closeOnBackdrop) {
     const handleBackdropClick = (event) => {
@@ -79,7 +96,7 @@ if (props.closeOnBackdrop) {
     onUnmounted(() => {
         document.removeEventListener('click', handleBackdropClick)
     })
-};
+}
 </script>
 
 <style scoped>

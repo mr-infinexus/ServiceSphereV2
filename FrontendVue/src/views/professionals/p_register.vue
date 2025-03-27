@@ -8,26 +8,26 @@
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="username">Username</label>
                         <input class="form-control" id="username" maxlength="32" minlength="4" v-model="username"
-                            placeholder="Username" required type="text" value="">
+                            placeholder="Username" required="" type="text">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="password">Password</label>
                         <input class="form-control" id="password" maxlength="32" minlength="8" v-model="password"
-                            placeholder="Password" required type="password" value="">
+                            placeholder="Password" required="" type="password">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="email">Email</label>
                         <input class="form-control" id="email" maxlength="64" minlength="8" v-model="email"
-                            placeholder="Email" required type="email" value="">
+                            placeholder="Email" required="" type="email">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="fullname">Full Name</label>
                         <input class="form-control" id="fullname" maxlength="64" minlength="3" v-model="fullname"
-                            placeholder="Full Name" required type="text" value="">
+                            placeholder="Full Name" required="" type="text">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="service_type">Service Name</label>
-                        <select class="form-select" id="service_type" v-model="service_type" required>
+                        <select class="form-select" id="service_type" v-model="service_type" required="">
                             <option selected disabled value="">Choose an option</option>
                             <option :value="service.id" v-for="service in services" :key="service.id">
                                 {{ service.name }}
@@ -36,23 +36,23 @@
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="experience">Experience (in Years)</label>
-                        <input class="form-control" id="experience" max="60" min="0" v-model="experience" required
-                            type="number" value="">
+                        <input class="form-control" id="experience" max="60" min="0" v-model="experience" required=""
+                            type="number">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="contact_number">Contact Number</label>
                         <input class="form-control" id="contact_number" max="9999999999" min="1000000000"
-                            v-model="contact_number" required type="number" value="">
+                            v-model="contact_number" required="" type="number">
                     </div>
                     <div class="col-md-6 mb-3">
                         <label class="form-label" for="pincode">Pincode</label>
-                        <input class="form-control" id="pincode" max="999999" min="100000" v-model="pincode" required
-                            type="number" value="">
+                        <input class="form-control" id="pincode" max="999999" min="100000" v-model="pincode" required=""
+                            type="number">
                     </div>
                     <div class="col-12 mb-3">
                         <label class="form-label" for="address">Address</label>
-                        <textarea class="form-control" id="address" v-model="address" required rows="1"
-                            value=""></textarea>
+                        <textarea class="form-control" id="address" v-model="address" maxlength="128" required=""
+                            rows="1"></textarea>
                     </div>
                     <div class="text-center my-3">
                         <button class="btn btn-success mx-2 px-3">
@@ -70,7 +70,7 @@
 <script setup>
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAlert } from '@/components/alert.js'
+import { useAlert } from '@/components/alert.js';
 
 const router = useRouter();
 const { showAlert } = useAlert();

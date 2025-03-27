@@ -1,6 +1,6 @@
 from celery.result import AsyncResult
 from datetime import datetime, timezone, timedelta
-from flask import Flask, request, abort, send_from_directory
+from flask import Flask, abort, send_from_directory
 from flask_caching import Cache
 from flask_cors import CORS
 from flask_jwt_extended import create_access_token, get_jwt, jwt_required, JWTManager
@@ -41,8 +41,16 @@ def role_required(role):
 
 
 class RegisterCustomer(Resource):
+    customer_parser = reqparse.RequestParser()
+    customer_parser.add_argument("username", type=str, required=True, help="Username is required")
+    customer_parser.add_argument("email", type=str, required=True, help="Email is required")
+    customer_parser.add_argument("password", type=str, required=True, help="Password is required")
+    customer_parser.add_argument("fullname", type=str, required=True, help="Full Name is required")
+    customer_parser.add_argument("address", type=str, required=True, help="Address is required")
+    customer_parser.add_argument("pincode", type=int, required=True, help="Pincode is required")
+    customer_parser.add_argument("contact_number", type=int, required=True, help="Contact Number is required")
     def post(self):
-        data = request.json
+        data = self.customer_parser.parse_args()
         user = db.session.scalars(select(User).filter_by(username=data["username"])).first()
         if user:
             return {"message": "User already exists!"}, 401
@@ -56,8 +64,18 @@ class RegisterCustomer(Resource):
 
 
 class RegisterProfessional(Resource):
+    professional_parser = reqparse.RequestParser()
+    professional_parser.add_argument("username", type=str, required=True, help="Username is required")
+    professional_parser.add_argument("email", type=str, required=True, help="Email is required")
+    professional_parser.add_argument("password", type=str, required=True, help="Password is required")
+    professional_parser.add_argument("fullname", type=str, required=True, help="Full Name is required")
+    professional_parser.add_argument("service_type", type=int, required=True, help="Service Name is required")
+    professional_parser.add_argument("experience", type=int, required=True, help="Experience is required")
+    professional_parser.add_argument("address", type=str, required=True, help="Address is required")
+    professional_parser.add_argument("pincode", type=int, required=True, help="Pincode is required")
+    professional_parser.add_argument("contact_number", type=int, required=True, help="Contact Number is required")
     def post(self):
-        data = request.json
+        data = self.professional_parser.parse_args()
         user = db.session.scalars(select(User).filter_by(username=data["username"])).first()
         if user:
             return {"message": "User already exists!"}, 401
@@ -73,8 +91,11 @@ class RegisterProfessional(Resource):
 
 
 class Login(Resource):
+    login_parser = reqparse.RequestParser()
+    login_parser.add_argument("username", type=str, required=True, help="Username is required")
+    login_parser.add_argument("password", type=str, required=True, help="Password is required")
     def post(self):
-        data = request.json
+        data = self.login_parser.parse_args()
         user = db.session.scalars(select(User).filter_by(username=data["username"])).first()
 
         if not user:
@@ -120,6 +141,14 @@ class ServicesList(Resource):
 
 
 class UserProfile(Resource):
+    profile_parser = reqparse.RequestParser()
+    profile_parser.add_argument("experience", type=int, default=None)
+    profile_parser.add_argument("email", type=str, required=True, help="Email is required")
+    profile_parser.add_argument("fullname", type=str, required=True, help="Full Name is required")
+    profile_parser.add_argument("address", type=str, required=True, help="Address is required")
+    profile_parser.add_argument("pincode", type=int, required=True, help="Pincode is required")
+    profile_parser.add_argument("contact_number", type=int, required=True, help="Contact Number is required")
+
     @jwt_required()
     @cache.memoize(timeout=3600)
     def get(self, username):
@@ -144,7 +173,7 @@ class UserProfile(Resource):
     def put(self, username):
         if username != get_jwt()["username"]:
             abort(403)
-        data = request.json
+        data = self.profile_parser.parse_args() 
         user = db.session.scalars(select(User).filter_by(username=username)).first()
         if user.role == "professional":
             user.experience = data["experience"]

@@ -79,27 +79,28 @@
                 </table>
             </div>
         </Modal>
-        <Modal v-model="editServiceModal" type="warning" confirm-button="Confirm" @confirm="editService(service_id)">
+        <Modal v-model="editServiceModal" type="warning" confirm-button="Confirm" @submit="editService(service_id)">
             <template #header>Edit Service</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11">
                     <label class="form-label text-black me-2" for="name">Service Name</label>
                     <input class="form-control" id="name" maxlength="100" minlength="2" v-model="name" required=""
-                        type="text" value=""><br>
+                        type="text"><br>
                 </div>
                 <div class="d-flex align-items-center justify-content-center col-12 mb-2">
                     <label class="form-label text-black mb-0 me-2" for="price">Price</label>
                     <input class="form-control w-50" id="price" min="0" v-model="price" required="" step="any"
-                        type="number" value=""><br>
+                        type="number"><br>
                 </div>
                 <div class="d-flex align-items-center justify-content-center col-11 my-2">
                     <label class="form-label text-black mb-0 me-2" for="time_required">Time Required</label>
                     <input class="form-control w-50" id="time_required" min="0" v-model="time_required" required=""
-                        type="number" value=""><br>
+                        type="number"><br>
                 </div>
                 <div class="col-11">
                     <label class="form-label text-black me-2" for="description">Description</label>
-                    <textarea class="form-control" id="description" v-model="description" value=""></textarea><br>
+                    <textarea class="form-control" id="description" v-model="description" maxlength="128"
+                        required=""></textarea><br>
                 </div>
             </div>
         </Modal>
@@ -107,27 +108,28 @@
             <template #header>Delete Service</template>
             <p class="m-2">Are you sure you want to delete this service?<br>This action cannot be undone.</p>
         </Modal>
-        <Modal v-model="addServiceModal" confirm-button="Confirm" @confirm="addService">
+        <Modal v-model="addServiceModal" confirm-button="Confirm" @submit="addService">
             <template #header>Add New Service</template>
             <div class="row d-flex align-items-center justify-content-center bg-primary-subtle m-1 py-2">
                 <div class="col-11">
                     <label class="form-label text-black me-2" for="name">Service Name</label>
                     <input class="form-control" id="name" maxlength="100" minlength="2" v-model="name" required=""
-                        type="text" value=""><br>
+                        type="text"><br>
                 </div>
                 <div class="d-flex align-items-center justify-content-center col-12 mb-2">
                     <label class="form-label text-black mb-0 me-2" for="price">Price</label>
                     <input class="form-control w-50" id="price" min="0" v-model="price" required="" step="any"
-                        type="number" value=""><br>
+                        type="number"><br>
                 </div>
                 <div class="d-flex align-items-center justify-content-center col-11 my-2">
                     <label class="form-label text-black mb-0 me-2" for="time_required">Time Required</label>
                     <input class="form-control w-50" id="time_required" min="0" v-model="time_required" required=""
-                        type="number" value=""><br>
+                        type="number"><br>
                 </div>
                 <div class="col-11">
                     <label class="form-label text-black me-2" for="description">Description</label>
-                    <textarea class="form-control" id="description" v-model="description" value=""></textarea><br>
+                    <textarea class="form-control" id="description" v-model="description" maxlength="128"
+                        required=""></textarea><br>
                 </div>
             </div>
         </Modal>
