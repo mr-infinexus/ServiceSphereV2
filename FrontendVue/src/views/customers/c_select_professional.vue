@@ -126,7 +126,7 @@ const bookService = async () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                task: task.value,
+                task: task.value.trim(),
                 time_of_request: time_of_request.value
             })
         });

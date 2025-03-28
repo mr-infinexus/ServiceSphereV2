@@ -107,14 +107,14 @@ const handleRegisterProfessional = async () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                username: username.value,
+                username: username.value.trim(),
                 password: password.value,
-                email: email.value,
-                fullname: fullname.value,
+                email: email.value.trim(),
+                fullname: fullname.value.trim(),
                 contact_number: contact_number.value,
                 service_type: service_type.value,
                 experience: experience.value,
-                address: address.value,
+                address: address.value.trim(),
                 pincode: pincode.value
             })
         });

@@ -150,7 +150,7 @@ const showRejectModal = async (id) => {
 const acceptService = async (id) => {
     try {
         const response = await fetch(`http://127.0.0.1:5000/api/service_request/${id}/accept`, {
-            method: 'GET',
+            method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             }

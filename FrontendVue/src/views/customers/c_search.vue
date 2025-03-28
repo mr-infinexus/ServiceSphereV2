@@ -62,21 +62,21 @@
                                 </span>
                             </td>
                             <td>
-                                <button v-if="request.service_status === 'requested'" class="btn btn-warning mx-1 py-1"
-                                    @click="showeditServiceModal(request)">
-                                    <i class="bi bi-pencil-square"></i>
-                                </button>
-                                <button
-                                    v-if="request.service_status === 'requested' || request.service_status === 'accepted'"
-                                    class="btn btn-success mx-1 py-1" @click="showCloseServiceModal(request)">
-                                    <i class="bi bi-journal-check"></i>
-                                </button>
-                                <button
-                                    v-if="(request.service_status === 'rejected' || request.service_status === 'closed') && !request.time_of_completion"
-                                    class="btn btn-info mx-1 py-1" @click="showServiceRemarksModal(request)">
+                                <template
+                                    v-if="request.service_status === 'requested' || request.service_status === 'accepted'">
+                                    <button v-if="request.service_status === 'requested'"
+                                        class="btn btn-warning mx-1 py-1" @click="showeditServiceModal(request)">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <button class="btn btn-success mx-1 py-1" @click="showCloseServiceModal(request)">
+                                        <i class="bi bi-journal-check"></i>
+                                    </button>
+                                </template>
+                                <button v-else-if="!request.review_id" class="btn btn-info mx-1 py-1"
+                                    @click="showServiceRemarksModal(request)">
                                     <i class="bi bi-person-lines-fill"></i>
                                 </button>
-                                <span v-if="request.time_of_completion">N/A</span>
+                                <span v-else>N/A</span>
                             </td>
                         </tr>
                     </tbody>
@@ -146,8 +146,8 @@
                     </div>
                 </div>
                 <div class="col-11 mb-2">
-                    <label class="form-label text-black" for="review">Review</label>
-                    <input class="form-control" id="review" maxlength="100" minlength="2" v-model="review" type="text">
+                    <label class="form-label text-black" for="remarks">Remarks</label>
+                    <input class="form-control" id="remarks" maxlength="100" minlength="2" v-model="remarks" type="text">
                 </div>
             </div>
         </Modal>
@@ -298,7 +298,7 @@ const bookService = async () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                task: task.value,
+                task: task.value.trim(),
                 time_of_request: time_of_request.value
             })
         });
@@ -320,7 +320,7 @@ const closeServiceModal = ref(false);
 const serviceRemarksModal = ref(false);
 const professional_name = ref();
 const rating = ref();
-const review = ref();
+const remarks = ref();
 const showeditServiceModal = async (request) => {
     request_id.value = request.id;
     service_name.value = request.service;
@@ -349,7 +349,7 @@ const editServiceRequest = async () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                task: task.value,
+                task: task.value.trim(),
                 time_of_request: time_of_request.value
             })
         });
@@ -388,20 +388,20 @@ const closeServiceRequest = async () => {
 const serviceRemarks = async () => {
     try {
         const response = await fetch(`http://127.0.0.1:5000/api/review/${request_id.value}`, {
-            method: 'PUT',
+            method: 'POST',
             headers: {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 rating: rating.value,
-                review: review.value
+                remarks: remarks.value.trim()
             })
         });
         const data = await response.json();
         if (response.ok) {
             rating.value = 0;
-            review.value = null;
+            remarks.value = null;
             showAlert(data.message, "success");
             await handleCustomerSearch();
         } else {

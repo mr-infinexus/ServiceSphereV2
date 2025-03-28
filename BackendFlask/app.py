@@ -57,7 +57,8 @@ class RegisterCustomer(Resource):
         if not user:
             pwhash = generate_password_hash(data["password"])
             new_user = User(username=data["username"], password_hashed=pwhash, role="customer", status="verified", email=data["email"],
-                            fullname=data["fullname"], address=data["address"], pincode=int(data["pincode"]), contact_number=int(data["contact_number"]))
+                            fullname=data["fullname"], address=data["address"], pincode=int(data["pincode"]),
+                            contact_number=int(data["contact_number"]), created_at=datetime.now(timezone(timedelta(hours=5, minutes=30))))
             db.session.add(new_user)
             db.session.commit()
             return {"message": "Registration successful! Please log in."}, 200
@@ -84,7 +85,7 @@ class RegisterProfessional(Resource):
             new_user = User(username=data["username"], password_hashed=pwhash, role="professional", status="pending",
                             email=data["email"], fullname=data["fullname"], service_type=int(data["service_type"]),
                             experience=int(data["experience"]), address=data["address"], pincode=int(data["pincode"]),
-                            contact_number=int(data["contact_number"]))
+                            contact_number=int(data["contact_number"]), created_at=datetime.now(timezone(timedelta(hours=5, minutes=30))))
             db.session.add(new_user)
             db.session.commit()
             return {"message": "Registration successful! Please wait for admin verification."}, 200
@@ -268,7 +269,8 @@ class ModifyService(Resource):
             name=data["name"],
             price=data["price"],
             time_required=data["time_required"],
-            description=data["description"]
+            description=data["description"],
+            created_at=datetime.now(timezone(timedelta(hours=5, minutes=30)))
         )
         db.session.add(new_service)
         db.session.commit()
@@ -483,7 +485,8 @@ class CustomerHome(Resource):
                 "time_of_request": service_request.time_of_request.isoformat(),
                 "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
                 "task": service_request.task,
-                "service_status": service_request.service_status
+                "service_status": service_request.service_status,
+                "review_id": service_request.review.id if service_request.review else None
             })
         return {"current_user": current_user, "services": services_json, "service_history": service_history_json}, 200
 
@@ -561,14 +564,15 @@ class ServiceRemarks(Resource):
     remark_parser.add_argument("remarks", type=str)
 
     @role_required("customer")
-    def put(self, request_id):
+    def post(self, request_id):
         data = self.remark_parser.parse_args()
         history_entry = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
         if history_entry is None:
             abort(404)
-        new_remark = Review(service_request_id=request_id, professional_id=history_entry.professional_id,
-                            customer_id=history_entry.customer_id, rating=data["rating"], remarks=data["remarks"])
-        history_entry.time_of_completion = datetime.now(timezone(timedelta(hours=5, minutes=30)))
+        new_remark = Review(service_request_id=request_id, professional_id=history_entry.professional_id, customer_id=history_entry.customer_id,
+                            rating=data["rating"], remarks=data["remarks"], created_at=datetime.now(timezone(timedelta(hours=5, minutes=30))))
+        if history_entry.service_status == "rejected":
+            history_entry.time_of_completion = datetime.now(timezone(timedelta(hours=5, minutes=30)))
         db.session.add(new_remark)
         db.session.commit()
         return {"message": "Remarks submitted successfully!"}, 201
@@ -583,13 +587,13 @@ class CustomerSearch(Resource):
             service_history = db.session.scalars(select(ServiceRequest)
                                                  .options(selectinload(ServiceRequest.professional), selectinload(ServiceRequest.service))
                                                  .where(ServiceRequest.customer_id == int(jwt_claims["sub"]),
-                                                     or_(ServiceRequest.service_status.ilike(f"%{search_text}%"),
-                                                         ServiceRequest.task.ilike(f"%{search_text}%"),
-                                                         ServiceRequest.professional.has(User.username.ilike(f"%{search_text}%")),
-                                                         ServiceRequest.professional.has(User.fullname.ilike(f"%{search_text}%")),
-                                                         ServiceRequest.professional.has(User.address.ilike(f"%{search_text}%")),
-                                                         ServiceRequest.professional.has(User.pincode.ilike(f"%{search_text}%")),
-                                                         ServiceRequest.service.has(Service.name.ilike(f"%{search_text}%"))))
+                                                        or_(ServiceRequest.service_status.ilike(f"%{search_text}%"),
+                                                            ServiceRequest.task.ilike(f"%{search_text}%"),
+                                                            ServiceRequest.professional.has(User.username.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.professional.has(User.fullname.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.professional.has(User.address.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.professional.has(User.pincode.ilike(f"%{search_text}%")),
+                                                            ServiceRequest.service.has(Service.name.ilike(f"%{search_text}%"))))
                                                  .order_by(ServiceRequest.time_of_request.desc())).all()
             if not service_history:
                 return {"message": "No Service Request found!"}, 404
@@ -601,7 +605,8 @@ class CustomerSearch(Resource):
                     "time_of_request": service_request.time_of_request.isoformat(),
                     "time_of_completion": service_request.time_of_completion.isoformat() if service_request.time_of_completion else None,
                     "task": service_request.task,
-                    "service_status": service_request.service_status
+                    "service_status": service_request.service_status,
+                    "review_id": service_request.review.id if service_request.review else None
                 })
         elif search_by == "professional":
             professionals = db.session.scalars(select(User)
@@ -723,7 +728,7 @@ class ProfessionalHome(Resource):
 
 class ServiceAction(Resource):
     @role_required("professional")
-    def get(self, request_id):
+    def put(self, request_id):
         service_request = db.session.scalars(select(ServiceRequest).filter_by(id=request_id)).first()
         if service_request is None:
             abort(404)

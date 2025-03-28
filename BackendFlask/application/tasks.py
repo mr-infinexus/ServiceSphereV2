@@ -28,7 +28,7 @@ def export_csv():
     csv_file_name = f"requests_{int(datetime.now().timestamp())}.csv"
     with open(f"static/{csv_file_name}", "w", newline="") as csvfile:
         csv_file = csv.writer(csvfile, delimiter=",")
-        csv_file.writerow(["ID", "Service Name", "Customer Name", "Professional Name", "Time of Request", "Time of Completion", "Task", "Service Status"])
+        csv_file.writerow(["ID", "Service Name", "Customer Name", "Professional Name", "Time of Request", "Time of Completion", "Task", "Service Status", "Rating", "Remarks"])
         for service_request in service_history:
             csv_file.writerow([service_request.id,
                                service_request.service.name,
@@ -37,7 +37,9 @@ def export_csv():
                                service_request.time_of_request.strftime("%d-%m-%Y %H:%M:%S"),
                                service_request.time_of_completion.strftime("%d-%m-%Y %H:%M:%S") if service_request.time_of_completion else "N/A",
                                service_request.task,
-                               service_request.service_status
+                               service_request.service_status,
+                               service_request.review.rating if service_request.review else "N/A",
+                               service_request.review.remarks if service_request.review else "N/A"
                                ])
     return csv_file_name
 

@@ -464,10 +464,10 @@ const editService = async (id) => {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify({
-                name: name.value,
+                name: name.value.trim(),
                 price: price.value,
                 time_required: time_required.value,
-                description: description.value
+                description: description.value.trim()
             })
         });
         const data = await response.json();
@@ -509,10 +509,10 @@ const addService = async () => {
                 'Authorization': `Bearer ${localStorage.getItem('token')}`
             },
             body: JSON.stringify({
-                name: name.value,
+                name: name.value.trim(),
                 price: price.value,
                 time_required: time_required.value,
-                description: description.value
+                description: description.value.trim()
             })
         });
         const data = await response.json();
